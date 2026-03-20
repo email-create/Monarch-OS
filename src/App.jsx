@@ -296,19 +296,16 @@ export default function MonarchOS() {
   // ═══ WELCOME SCREEN ═══
   const WelcomePage = () => {
     const [phase, setPhase] = useState(0);
-    useEffect(() => { setTimeout(()=>setPhase(1),600); setTimeout(()=>setPhase(2),1200); setTimeout(()=>setPhase(3),1800); }, []);
+    useEffect(() => { const t1=setTimeout(()=>setPhase(1),300);const t2=setTimeout(()=>setPhase(2),800);const t3=setTimeout(()=>setPhase(3),1300);return()=>{clearTimeout(t1);clearTimeout(t2);clearTimeout(t3);}; }, []);
     return (
       <div style={{position:"fixed",inset:0,background:C.bg,display:"flex",alignItems:"center",justifyContent:"center",zIndex:9999,overflow:"hidden",fontFamily:FH}}>
         <div style={{position:"absolute",width:800,height:800,borderRadius:"50%",border:`1px solid rgba(212,175,55,0.04)`,top:"50%",left:"50%",transform:"translate(-50%,-50%)",pointerEvents:"none"}}/>
         <div style={{position:"absolute",width:500,height:500,borderRadius:"50%",border:`1px solid rgba(212,175,55,0.06)`,top:"50%",left:"50%",transform:"translate(-50%,-50%)",pointerEvents:"none"}}/>
         <div style={{position:"absolute",width:300,height:300,borderRadius:"50%",background:"radial-gradient(circle,rgba(212,175,55,0.06) 0%,transparent 70%)",top:"50%",left:"50%",transform:"translate(-50%,-50%)",pointerEvents:"none"}}/>
-        <div style={{textAlign:"center",position:"relative",zIndex:1,maxWidth:520,padding:40}}>
-          <div style={{marginBottom:28,opacity:phase>=1?1:0,transform:phase>=1?"scale(1) translateY(0)":"scale(0.8) translateY(20px)",transition:"all 1.2s cubic-bezier(0.16,1,0.3,1)"}}>
-            <div style={{fontSize:48,color:C.gold,lineHeight:1}}>♛</div>
-            <div style={{fontSize:22,fontWeight:700,color:C.gold,letterSpacing:6,fontFamily:FH,marginTop:4}}>JW</div>
-          </div>
-          <div style={{opacity:phase>=1?1:0,transform:phase>=1?"translateY(0)":"translateY(24px)",transition:"all 1s cubic-bezier(0.16,1,0.3,1) 0.2s"}}>
-            <div style={{fontSize:48,fontWeight:300,color:C.goldLight,letterSpacing:3,lineHeight:1.2}}>Welcome to Monarch OS</div>
+        <div style={{textAlign:"center",position:"relative",zIndex:1,maxWidth:700,padding:40}}>
+          <div style={{opacity:phase>=1?1:0,transform:phase>=1?"translateY(0)":"translateY(24px)",transition:"all 1s cubic-bezier(0.16,1,0.3,1)"}}>
+            <div style={{fontSize:46,fontWeight:300,color:C.goldLight,letterSpacing:3,lineHeight:1,whiteSpace:"nowrap"}}>Welcome to Monarch OS</div>
+            <div style={{fontSize:14,color:C.gold,letterSpacing:4,marginTop:12,fontFamily:FB}}>by JW Monarch</div>
             <div style={{width:80,height:1,background:`linear-gradient(90deg,transparent,${C.gold},transparent)`,margin:"16px auto",opacity:0.6}}/>
             <p style={{fontSize:15,color:C.textSec,letterSpacing:2,fontWeight:300,fontFamily:FB}}>Land Wholesaling Command Center</p>
           </div>
@@ -360,7 +357,7 @@ export default function MonarchOS() {
     const dropRef=useRef(null);
     useEffect(()=>{if(!showDrop)return;const h=e=>{if(dropRef.current&&!dropRef.current.contains(e.target))setShowDrop(false);};document.addEventListener("mousedown",h);return()=>document.removeEventListener("mousedown",h);},[showDrop]);
     return (
-    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:28}}>
+    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:28,position:"relative",zIndex:1500}}>
       <div><h1 style={{fontSize:26,fontWeight:400,color:C.text,margin:0,letterSpacing:1,fontFamily:FH}}>{title}</h1>{subtitle && <p style={{fontSize:13,color:C.textMuted,marginTop:4,letterSpacing:0.5}}>{subtitle}</p>}</div>
       <div style={{display:"flex",alignItems:"center",gap:16}}>
         {todayFollowUps.length > 0 && <div onClick={()=>setPage("calendar")} style={{position:"relative",cursor:"pointer",color:C.textSec,padding:8,borderRadius:10,background:"rgba(255,255,255,0.03)"}}>{Icons.bell}<span style={{position:"absolute",top:4,right:4,width:16,height:16,borderRadius:8,background:C.red,color:"#fff",fontSize:9,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center"}}>{todayFollowUps.length}</span></div>}
@@ -370,7 +367,7 @@ export default function MonarchOS() {
             <div><div style={{fontSize:13,color:C.text,fontWeight:500}}>{profile||"Select"}</div><div style={{fontSize:10,color:C.textMuted,letterSpacing:0.5}}>Operator</div></div>
             <span style={{color:C.textMuted,fontSize:10,marginLeft:4}}>▼</span>
           </div>
-          {showDrop && <div style={{position:"absolute",top:"100%",right:0,marginTop:6,background:"#1E1E1E",border:`1px solid ${C.goldBorder}`,borderRadius:12,overflow:"hidden",zIndex:100,minWidth:160,boxShadow:"0 12px 32px rgba(0,0,0,0.5)"}}>
+          {showDrop && <div style={{position:"absolute",top:"100%",right:0,marginTop:6,background:"#1E1E1E",border:`1px solid ${C.goldBorder}`,borderRadius:12,overflow:"hidden",zIndex:2500,minWidth:160,boxShadow:"0 12px 32px rgba(0,0,0,0.5)"}}>
             {PROFILES.map(p=>(
               <div key={p} onClick={()=>{switchProfile(p);setShowDrop(false);}} style={{padding:"12px 18px",cursor:"pointer",display:"flex",alignItems:"center",gap:10,background:p===profile?"rgba(212,175,55,0.08)":"transparent",color:p===profile?C.gold:C.text,fontSize:13,borderBottom:`1px solid ${C.goldBorder}`}}>
                 <div style={{width:26,height:26,borderRadius:8,background:`linear-gradient(135deg,${C.gold}30,${C.gold}10)`,display:"flex",alignItems:"center",justifyContent:"center",color:C.gold,fontSize:11,fontWeight:600}}>{p.charAt(0)}</div>
@@ -908,8 +905,8 @@ export default function MonarchOS() {
       <TopBar title="Seller Map" subtitle={`${geocoded} of ${sellers.filter(s=>!s.archived).length} sellers geocoded`}/>
       <div style={{position:"relative",borderRadius:16,overflow:"hidden",border:`1px solid ${C.goldBorder}`}}>
         <div ref={mapRef} style={{height:"calc(100vh - 160px)",width:"100%",background:"#1a1a2e"}}/>
-        {/* Satellite toggle */}
-        <div onClick={()=>setSatellite(!satellite)} style={{position:"absolute",top:16,left:16,zIndex:1000,background:C.bgCard,border:`1px solid ${C.goldBorder}`,borderRadius:10,padding:"8px 14px",cursor:"pointer",fontSize:12,color:C.gold,boxShadow:"0 4px 12px rgba(0,0,0,0.4)"}}>{satellite?"🌑 Dark":"🛰 Satellite"}</div>
+        {/* Satellite toggle - bottom left */}
+        <div onClick={()=>setSatellite(!satellite)} style={{position:"absolute",bottom:16,left:16,zIndex:1000,background:C.bgCard,border:`1px solid ${C.goldBorder}`,borderRadius:10,padding:"8px 14px",cursor:"pointer",fontSize:12,color:C.gold,boxShadow:"0 4px 12px rgba(0,0,0,0.4)"}}>{satellite?"🌑 Dark":"🛰 Satellite"}</div>
         {/* Filter panel */}
         <div style={{position:"absolute",top:16,right:16,zIndex:1000,background:C.bgCard,border:`1px solid ${C.goldBorder}`,borderRadius:14,padding:16,maxWidth:220,maxHeight:"60vh",overflowY:"auto",boxShadow:"0 8px 24px rgba(0,0,0,0.4)"}}>
           <div style={{fontSize:12,color:C.gold,fontWeight:600,letterSpacing:1,marginBottom:10}}>FILTERS</div>
@@ -931,6 +928,10 @@ export default function MonarchOS() {
     </div>);
   };
 
+  // Show blank screen briefly while checking if profile exists (prevents flash)
+  const [appReady, setAppReady] = useState(false);
+  useEffect(()=>{setTimeout(()=>setAppReady(true),100);},[]);
+  if(!appReady) return <div style={{position:"fixed",inset:0,background:C.bg}}/>;
   if(page==="welcome"||!profile) return <WelcomePage/>;
 
   const pages = {dashboard:<DashboardPage/>,buyers:<BuyersPage/>,sellers:<SellersPage/>,calls:<CallsPage/>,calculator:<AnalyzerPage/>,pipeline:<PipelinePage/>,templates:<TemplatesPage/>,analytics:<AnalyticsPage/>,calendar:<CalendarPage/>,map:<MapPage/>,notes:<FeedbackPage/>,dataImport:<DataImportPage/>};
