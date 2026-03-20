@@ -303,20 +303,12 @@ export default function MonarchOS() {
         <div style={{position:"absolute",width:500,height:500,borderRadius:"50%",border:`1px solid rgba(212,175,55,0.06)`,top:"50%",left:"50%",transform:"translate(-50%,-50%)",pointerEvents:"none"}}/>
         <div style={{position:"absolute",width:300,height:300,borderRadius:"50%",background:"radial-gradient(circle,rgba(212,175,55,0.06) 0%,transparent 70%)",top:"50%",left:"50%",transform:"translate(-50%,-50%)",pointerEvents:"none"}}/>
         <div style={{textAlign:"center",position:"relative",zIndex:1,maxWidth:520,padding:40}}>
-          <div style={{marginBottom:36,opacity:phase>=1?1:0,transform:phase>=1?"scale(1) translateY(0)":"scale(0.8) translateY(20px)",transition:"all 1.2s cubic-bezier(0.16,1,0.3,1)"}}>
-            <svg width="80" height="60" viewBox="0 0 80 60" fill="none">
-              <path d="M40 8L10 30L18 52H62L70 30L40 8Z" stroke={C.gold} strokeWidth="1" fill="none" opacity="0.3"/>
-              <path d="M20 28L40 14L60 28" stroke={C.gold} strokeWidth="1.5" fill="none"/>
-              <circle cx="20" cy="28" r="3" fill={C.gold} opacity="0.8"/><circle cx="40" cy="14" r="3.5" fill={C.gold}/><circle cx="60" cy="28" r="3" fill={C.gold} opacity="0.8"/>
-              <circle cx="40" cy="34" r="2" fill={C.gold} opacity="0.4"/>
-              <line x1="20" y1="28" x2="20" y2="22" stroke={C.gold} strokeWidth="1" opacity="0.5"/><line x1="40" y1="14" x2="40" y2="6" stroke={C.gold} strokeWidth="1" opacity="0.5"/><line x1="60" y1="28" x2="60" y2="22" stroke={C.gold} strokeWidth="1" opacity="0.5"/>
-              <circle cx="20" cy="20" r="2" fill={C.gold} opacity="0.6"/><circle cx="40" cy="4" r="2.5" fill={C.gold} opacity="0.7"/><circle cx="60" cy="20" r="2" fill={C.gold} opacity="0.6"/>
-            </svg>
+          <div style={{marginBottom:28,opacity:phase>=1?1:0,transform:phase>=1?"scale(1) translateY(0)":"scale(0.8) translateY(20px)",transition:"all 1.2s cubic-bezier(0.16,1,0.3,1)"}}>
+            <div style={{fontSize:48,color:C.gold,lineHeight:1}}>♛</div>
+            <div style={{fontSize:22,fontWeight:700,color:C.gold,letterSpacing:6,fontFamily:FH,marginTop:4}}>JW</div>
           </div>
           <div style={{opacity:phase>=1?1:0,transform:phase>=1?"translateY(0)":"translateY(24px)",transition:"all 1s cubic-bezier(0.16,1,0.3,1) 0.2s"}}>
-            <div style={{fontSize:13,letterSpacing:8,color:C.gold,fontWeight:600,textTransform:"uppercase",marginBottom:8,fontFamily:FB}}>JW Monarch</div>
-            <div style={{fontSize:52,fontWeight:300,color:C.goldLight,letterSpacing:4,lineHeight:1.1}}>Welcome to Monarch OS</div>
-            <div style={{fontSize:14,color:C.gold,letterSpacing:4,marginTop:8,fontFamily:FB}}>by JW Monarch</div>
+            <div style={{fontSize:48,fontWeight:300,color:C.goldLight,letterSpacing:3,lineHeight:1.2}}>Welcome to Monarch OS</div>
             <div style={{width:80,height:1,background:`linear-gradient(90deg,transparent,${C.gold},transparent)`,margin:"16px auto",opacity:0.6}}/>
             <p style={{fontSize:15,color:C.textSec,letterSpacing:2,fontWeight:300,fontFamily:FB}}>Land Wholesaling Command Center</p>
           </div>
@@ -339,11 +331,8 @@ export default function MonarchOS() {
   const Sidebar = ({mobile}) => (
     <div style={{width:mobile?260:sW,minWidth:mobile?260:sW,background:C.bgSidebar,borderRight:`1px solid ${C.goldBorder}`,display:"flex",flexDirection:"column",height:"100vh",overflowY:"auto",position:mobile?"fixed":"sticky",top:0,zIndex:mobile?1000:10,...(mobile?{left:0}:{}),transition:"width 0.3s, min-width 0.3s"}}>
       <div style={{padding:sidebarCollapsed?"18px 12px":"22px 20px",borderBottom:`1px solid ${C.goldBorder}`,display:"flex",alignItems:"center",gap:12,justifyContent:sidebarCollapsed?"center":"flex-start"}}>
-        <svg width="28" height="22" viewBox="0 0 80 60" fill="none" style={{flexShrink:0}}>
-          <path d="M20 28L40 14L60 28" stroke={C.gold} strokeWidth="2" fill="none"/>
-          <circle cx="20" cy="28" r="2.5" fill={C.gold}/><circle cx="40" cy="14" r="3" fill={C.gold}/><circle cx="60" cy="28" r="2.5" fill={C.gold}/>
-        </svg>
-        {!sidebarCollapsed && <div><div style={{fontSize:10,letterSpacing:3,color:C.gold,fontWeight:600,textTransform:"uppercase",lineHeight:1}}>JW Monarch</div><div style={{fontSize:15,color:C.goldLight,fontWeight:400,letterSpacing:1,marginTop:3,fontFamily:FH}}>Monarch OS</div></div>}
+        <div style={{fontSize:22,color:C.gold,lineHeight:1,flexShrink:0}}>♛</div>
+        {!sidebarCollapsed && <div><div style={{fontSize:13,letterSpacing:2,color:C.gold,fontWeight:600,lineHeight:1}}>Monarch OS</div><div style={{fontSize:10,color:C.textMuted,letterSpacing:1,marginTop:3}}>JW Monarch</div></div>}
       </div>
       {profile && !sidebarCollapsed && (
         <div style={{padding:"14px 20px",borderBottom:`1px solid ${C.goldBorder}`,display:"flex",alignItems:"center",gap:10}}>
@@ -618,15 +607,62 @@ export default function MonarchOS() {
 
   // ═══ DEAL ANALYZER ═══
   const AnalyzerPage = () => {
-    const [f,setF]=useState({address:"",acres:"",fmv:"",buyerPrice:"",offerPct:60});const offerPrice=Number(f.fmv||0)*(f.offerPct/100);const actualProfit=Number(f.buyerPrice||0)-offerPrice;const buyerSavings=Number(f.fmv||0)-Number(f.buyerPrice||0);
+    const [f,setF]=useState({address:"",acres:"",fmv:"",buyerPrice:"",offerPct:60});
+    const [aiResult,setAiResult]=useState(null);const [aiLoading,setAiLoading]=useState(false);const [aiError,setAiError]=useState("");
+    const offerPrice=Number(f.fmv||0)*(f.offerPct/100);const actualProfit=Number(f.buyerPrice||0)-offerPrice;const buyerSavings=Number(f.fmv||0)-Number(f.buyerPrice||0);
     const saveToPipeline=()=>{if(!f.fmv)return;setDeals(p=>[{id:uid(),address:f.address,acres:f.acres,fmv:f.fmv,offerPrice:offerPrice.toFixed(0),buyerPrice:f.buyerPrice,profit:actualProfit.toFixed(0),status:"Prospect",buyerId:"",dateEntered:todayStr(),targetClose:"",notes:"",updatedAt:new Date().toISOString()},...p]);setPage("pipeline");addToast("Saved to pipeline");};
     const matchedBuyers=activeBuyers.filter(b=>{if(offerPrice<=0)return false;if(Number(b.maxPrice||0)<offerPrice)return false;if(f.address&&b.locations){const locs=b.locations.toLowerCase().split(",").map(x=>x.trim());if(locs.some(loc=>f.address.toLowerCase().includes(loc)))return true;}return !f.address&&Number(b.maxPrice||0)>=offerPrice;});
+
+    const runAiEstimate=async()=>{
+      if(!f.address.trim()){addToast("Enter an address first","error");return;}
+      setAiLoading(true);setAiError("");setAiResult(null);
+      try{
+        const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},
+          body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:2000,
+            tools:[{type:"web_search_20250305",name:"web_search"}],
+            system:"You are a land valuation assistant specializing in the Myrtle Beach and Horry County, South Carolina market. Always search the web for current data.",
+            messages:[{role:"user",content:`Analyze this property for land valuation: ${f.address}. Search for and return ONLY a JSON object (no markdown, no explanation) with these exact fields: redfin_estimate (number or null), redfin_derived (half of redfin_estimate, or null), comparable_sales_avg (number or null), county_assessed (number or null), estimated_fmv_low (number), estimated_fmv_high (number), price_per_acre (number or null), confidence ("high"|"medium"|"low"), hoa ("yes"|"no"|"unknown"), hoa_name (string or null), lot_type ("flag"|"normal"|"unknown"), zoning (string or null), buildable ("likely"|"unlikely"|"unknown"), flood_zone (string or null), wetlands ("flagged"|"none"|"unknown"), ciac ("paid"|"unpaid"|"unknown — verify with local utility"), sources (array of strings), notes (string)`}]
+          })});
+        const data=await res.json();
+        const text=data.content?.map(i=>i.text||"").filter(Boolean).join("\n")||"";
+        const clean=text.replace(/```json|```/g,"").trim();
+        const parsed=JSON.parse(clean);
+        setAiResult(parsed);
+      }catch(err){
+        console.error("AI estimate error:",err);
+        setAiError("Estimate unavailable — try again or enter FMV manually.");
+      }finally{setAiLoading(false);}
+    };
+    const useEstimate=()=>{if(aiResult?.estimated_fmv_high){setF(p=>({...p,fmv:String(aiResult.estimated_fmv_high)}));addToast("FMV populated from AI estimate");}};
+    const flagColor=(v)=>v==="likely"||v==="none"||v==="paid"||v==="no"||v==="normal"?C.green:v==="unlikely"||v==="flagged"||v==="unpaid"||v==="yes"||v==="flag"?C.red:C.textMuted;
+
     return(<div><TopBar title="Deal Calculator"/><div className="dash-two-col" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:18}}>
       <Card><div style={{fontSize:16,color:C.text,fontWeight:500,fontFamily:FH,marginBottom:18}}>Input</div>
         <FormField label="Property Address" full><input style={inputStyle} value={f.address} onChange={e=>setF(p=>({...p,address:e.target.value}))} placeholder="123 Main St, Myrtle Beach, SC"/></FormField>
+        <button onClick={runAiEstimate} disabled={aiLoading} style={{...btnOutline,marginBottom:14,width:"100%",opacity:aiLoading?0.5:1,display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>{aiLoading?<><span style={{display:"inline-block",width:14,height:14,border:"2px solid "+C.gold,borderTopColor:"transparent",borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/>Analyzing...</>:"✦ AI Estimate"}</button>
         <div style={formRow}><FormField label="Acres"><input style={inputStyle} type="number" value={f.acres} onChange={e=>setF(p=>({...p,acres:e.target.value}))}/></FormField><FormField label="Fair Market Value"><input style={inputStyle} type="number" value={f.fmv} onChange={e=>setF(p=>({...p,fmv:e.target.value}))}/></FormField></div><FormField label="Buyer Price" full><input style={inputStyle} type="number" value={f.buyerPrice} onChange={e=>setF(p=>({...p,buyerPrice:e.target.value}))}/></FormField><FormField label={`Offer % of FMV: ${f.offerPct}%`} full><input type="range" min="30" max="90" value={f.offerPct} onChange={e=>setF(p=>({...p,offerPct:Number(e.target.value)}))} style={{width:"100%",accentColor:C.gold}}/></FormField></Card>
       <Card><div style={{fontSize:16,color:C.text,fontWeight:500,fontFamily:FH,marginBottom:18}}>Output</div><div style={{display:"grid",gap:22}}><div><div style={{fontSize:11,color:C.textSec,letterSpacing:1.5,textTransform:"uppercase",marginBottom:4}}>Recommended Offer</div><div style={{fontSize:32,fontWeight:400,color:C.goldLight,fontFamily:FH}}>{fmt$(offerPrice)}</div></div><div><div style={{fontSize:11,color:C.textSec,letterSpacing:1.5,textTransform:"uppercase",marginBottom:4}}>Your Profit</div><div style={{fontSize:32,fontWeight:400,color:actualProfit>0?C.green:C.red,fontFamily:FH}}>{fmt$(actualProfit)}</div></div><div><div style={{fontSize:11,color:C.textSec,letterSpacing:1.5,textTransform:"uppercase",marginBottom:4}}>Buyer Savings vs FMV</div><div style={{fontSize:22,color:C.text}}>{fmt$(Math.abs(buyerSavings))}</div></div>{f.acres&&f.fmv&&<div><div style={{fontSize:11,color:C.textSec,letterSpacing:1.5,textTransform:"uppercase",marginBottom:4}}>Price/Acre</div><div style={{fontSize:18,color:C.textSec}}>{fmt$(Number(f.fmv)/Number(f.acres))}/ac</div></div>}</div><button style={{...btnStyle,marginTop:24,width:"100%"}} onClick={saveToPipeline}>Save to Pipeline</button></Card>
     </div>
+    {/* AI Estimate Results */}
+    {aiError&&<Card style={{marginTop:18,borderColor:C.red+"40"}}><p style={{color:C.red,margin:0,fontSize:13}}>{aiError}</p></Card>}
+    {aiResult&&<Card style={{marginTop:18,borderColor:C.gold+"30"}}>
+      <div style={{fontSize:16,color:C.goldLight,fontWeight:500,fontFamily:FH,marginBottom:16}}>AI Property Estimate <span style={{fontSize:11,color:C.textMuted,fontWeight:400,fontFamily:FB}}>— AI-generated, verify independently</span></div>
+      <div className="dash-two-col" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:18}}>
+        <div>
+          <div style={{fontSize:13,color:C.gold,fontWeight:600,marginBottom:10}}>Valuation</div>
+          {[["Redfin Estimate",aiResult.redfin_estimate],["Redfin Derived (50%)",aiResult.redfin_derived],["Comparable Sales Avg",aiResult.comparable_sales_avg],["County Assessed",aiResult.county_assessed],["Est. FMV Low",aiResult.estimated_fmv_low],["Est. FMV High",aiResult.estimated_fmv_high],["Price/Acre",aiResult.price_per_acre]].map(([label,val])=><div key={label} style={{display:"flex",justifyContent:"space-between",padding:"6px 0",borderBottom:`1px solid ${C.goldBorder}`,fontSize:12}}><span style={{color:C.textSec}}>{label}</span><span style={{color:C.text,fontWeight:500}}>{val!=null?fmt$(val):"—"}</span></div>)}
+          <div style={{display:"flex",justifyContent:"space-between",padding:"8px 0",fontSize:12}}><span style={{color:C.textSec}}>Confidence</span><Badge color={aiResult.confidence==="high"?C.green:aiResult.confidence==="medium"?C.orange:C.red}>{aiResult.confidence}</Badge></div>
+          <button style={{...btnStyle,marginTop:12,width:"100%"}} onClick={useEstimate}>Use FMV High: {fmt$(aiResult.estimated_fmv_high)}</button>
+        </div>
+        <div>
+          <div style={{fontSize:13,color:C.gold,fontWeight:600,marginBottom:10}}>Property Flags</div>
+          {[["HOA",aiResult.hoa],["Lot Type",aiResult.lot_type],["Zoning",aiResult.zoning||"unknown"],["Buildable",aiResult.buildable],["Flood Zone",aiResult.flood_zone||"unknown"],["Wetlands",aiResult.wetlands],["CIAC",aiResult.ciac]].map(([label,val])=><div key={label} style={{display:"flex",justifyContent:"space-between",padding:"6px 0",borderBottom:`1px solid ${C.goldBorder}`,fontSize:12}}><span style={{color:C.textSec}}>{label}</span><span style={{color:flagColor(val),fontWeight:500}}>{val||"—"}</span></div>)}
+          {aiResult.hoa_name&&<div style={{fontSize:11,color:C.textMuted,marginTop:6}}>HOA: {aiResult.hoa_name}</div>}
+        </div>
+      </div>
+      {aiResult.sources?.length>0&&<div style={{marginTop:14}}><div style={{fontSize:11,color:C.textMuted,letterSpacing:1,marginBottom:6}}>SOURCES</div>{aiResult.sources.map((s,i)=><div key={i} style={{fontSize:11,color:C.textSec,padding:"2px 0"}}>• {s}</div>)}</div>}
+      {aiResult.notes&&<div style={{marginTop:10,fontSize:12,color:C.textSec,fontStyle:"italic"}}>{aiResult.notes}</div>}
+    </Card>}
     {/* Buyer Match Preview */}
     <Card style={{marginTop:18}}>
       <div style={{fontSize:16,color:C.text,fontWeight:500,fontFamily:FH,marginBottom:12}}>Matching Buyers</div>
@@ -907,6 +943,7 @@ export default function MonarchOS() {
         ::-webkit-scrollbar{width:5px;}::-webkit-scrollbar-track{background:transparent;}::-webkit-scrollbar-thumb{background:rgba(212,175,55,0.12);border-radius:3px;}
         input:focus,select:focus,textarea:focus{border-color:${C.gold}!important;box-shadow:0 0 0 3px rgba(212,175,55,0.08)!important;}
         button:hover{opacity:0.88;}
+        @keyframes spin{to{transform:rotate(360deg);}}
         tr:hover td{background:rgba(212,175,55,0.03);}
         @media(max-width:900px){.m-sidebar{display:none!important;}.m-burger{display:flex!important;}.m-main{padding:16px!important;}.qa-grid{grid-template-columns:repeat(2,1fr)!important;}}
         @media(max-width:700px){.dash-two-col{grid-template-columns:1fr!important;}.stats-row{grid-template-columns:repeat(2,1fr)!important;}}
