@@ -572,6 +572,15 @@ export default function MonarchOS() {
             </Card>
           </div>
         </div>
+
+        {/* Hot Leads */}
+        {(()=>{const scored=sellers.filter(s=>!s.archived).map(s=>{const sw={Interested:5,Negotiating:4,Called:2,Voicemail:1}[s.status]||0;const days=s.lastContact?Math.floor((Date.now()-new Date(s.lastContact+"T00:00:00"))/864e5):999;const recency=days<=7?3:days<=30?1:0;const fuDays=s.followUp?Math.floor((new Date(s.followUp+"T00:00:00")-Date.now())/864e5):999;const urgency=fuDays<0?4:fuDays===0?3:0;return{...s,score:sw+recency+urgency};}).sort((a,b)=>b.score-a.score).slice(0,5).filter(s=>s.score>0);
+        return scored.length>0&&<Card style={{marginTop:18}}><div style={{fontSize:16,color:C.text,fontWeight:500,fontFamily:FH,marginBottom:14}}>🔥 Hot Leads</div>{scored.map(s=><div key={s.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"10px 0",borderBottom:`1px solid ${C.goldBorder}`}}><div><span style={{fontWeight:500,fontSize:13}}>{s.name||s.address||"Unknown"}</span><div style={{display:"flex",gap:6,marginTop:4}}><Badge color={STATUS_COLORS[s.status]}>{s.status}</Badge></div></div><div style={{display:"flex",alignItems:"center",gap:10}}><div style={{width:80,height:6,borderRadius:3,background:"rgba(255,255,255,0.04)"}}><div style={{height:6,borderRadius:3,background:C.gold,width:`${Math.min(s.score/12*100,100)}%`}}/></div><button style={{...btnSmall,padding:"5px 12px",fontSize:11}} onClick={()=>{setPrefillCallId(s.id);setPage("calls");}}>Call</button></div></div>)}</Card>;})()}
+
+        {/* Pipeline Health */}
+        {(()=>{const contacted30=sellers.filter(s=>!s.archived&&s.lastContact).filter(s=>Math.floor((Date.now()-new Date(s.lastContact+"T00:00:00"))/864e5)<=30).length;const totalActive=sellers.filter(s=>!s.archived).length||1;const pctContacted=(contacted30/totalActive)*100;const dealsWithClose=deals.filter(d=>d.targetClose).length;const totalDeals=deals.length||1;const pctClose=(dealsWithClose/totalDeals)*100;const intSellers=sellers.filter(s=>["Interested","Negotiating","Under Contract"].includes(s.status));const linkedInt=intSellers.filter(s=>deals.some(d=>d.sellerId===s.id)).length;const pctLinked=intSellers.length?(linkedInt/intSellers.length)*100:100;const convCapped=Math.min(Number(conv||0)/20*100,100);const score=Math.round(pctContacted*0.3+pctClose*0.2+pctLinked*0.25+convCapped*0.25);const color=score>=70?C.green:score>=40?C.orange:C.red;
+        return<Card style={{marginTop:18}}><div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}><div><div style={{fontSize:16,color:C.text,fontWeight:500,fontFamily:FH}}>Pipeline Health</div><div style={{fontSize:12,color:C.textMuted,marginTop:4}}>Contacted {contacted30}/{totalActive} sellers · {dealsWithClose}/{totalDeals} deals have close dates</div></div><div style={{fontSize:42,fontWeight:400,color,fontFamily:FH}}>{score}</div></div></Card>;})()}
+
         <HelpButton pageId="dashboard"/>
       </div>
     );
@@ -750,17 +759,30 @@ export default function MonarchOS() {
 
   // ═══ DEAL PIPELINE (PERSONAL) ═══
   const PipelinePage = () => {
-    const [modal,setModal]=useState(null);const [aiModal,setAiModal]=useState(null);
-    const blank={address:"",acres:"",fmv:"",offerPrice:"",buyerPrice:"",profit:"",status:"Prospect",buyerId:"",sellerId:"",dateEntered:todayStr(),targetClose:"",notes:""};const [form,setForm]=useState(blank);const [filter,setFilter]=useState("All");
-    const saveDeal=()=>{const now=new Date().toISOString();const d={...form,profit:(Number(form.buyerPrice||0)-Number(form.offerPrice||0)).toString(),updatedAt:now};if(modal==="new")setDeals(p=>[{...d,id:uid()},...p]);else setDeals(p=>p.map(x=>x.id===modal?{...x,...d}:x));setModal(null);addToast("Deal saved");};
+    const [modal,setModal]=useState(null);const [aiModal,setAiModal]=useState(null);const [actNote,setActNote]=useState("");
+    const blank={address:"",acres:"",fmv:"",offerPrice:"",buyerPrice:"",profit:"",status:"Prospect",buyerId:"",sellerId:"",dateEntered:todayStr(),targetClose:"",notes:"",activity:[]};const [form,setForm]=useState(blank);const [filter,setFilter]=useState("All");
+    const saveDeal=()=>{const now=new Date().toISOString();let activity=[...(form.activity||[])];
+      if(modal!=="new"){const old=deals.find(d=>d.id===modal);if(old&&old.status!==form.status)activity.push({id:uid(),date:now,type:"Status Change",note:`Status changed to ${form.status}`});}
+      const d={...form,activity,profit:(Number(form.buyerPrice||0)-Number(form.offerPrice||0)).toString(),updatedAt:now};if(modal==="new")setDeals(p=>[{...d,id:uid()},...p]);else setDeals(p=>p.map(x=>x.id===modal?{...x,...d}:x));setModal(null);setActNote("");addToast("Deal saved");};
+    const addActivity=()=>{if(!actNote.trim())return;setForm(p=>({...p,activity:[...(p.activity||[]),{id:uid(),date:new Date().toISOString(),type:"Note",note:actNote}]}));setActNote("");};
     const del=id=>setDeals(p=>p.filter(d=>d.id!==id));const filtered=filter==="All"?deals:deals.filter(d=>d.status===filter);
     const getSellerName=(sid)=>{const s=sellers.find(x=>x.id===sid);return s?(s.name||s.address||s.phone):"";};
     const flagColor=(v)=>v==="likely"||v==="none"||v==="paid"||v==="no"||v==="normal"?C.green:v==="unlikely"||v==="flagged"||v==="unpaid"||v==="yes"||v==="flag"?C.red:C.textMuted;
+    const actColor={Note:C.gold,"Status Change":C.blue,Call:C.green};
     return(<div><TopBar title="Deal Pipeline"/><div style={{display:"flex",justifyContent:"flex-end",marginBottom:18}}><button style={btnStyle} onClick={()=>{setForm(blank);setModal("new");}}>+ Add Deal</button></div>
       <div style={{display:"flex",gap:8,marginBottom:18,flexWrap:"wrap"}}>{["All",...DEAL_STATUSES].map(s=><button key={s} onClick={()=>setFilter(s)} style={{padding:"7px 18px",borderRadius:10,border:`1px solid ${filter===s?C.gold:C.goldBorder}`,background:filter===s?"rgba(212,175,55,0.1)":"transparent",color:filter===s?C.gold:C.textSec,fontSize:12,cursor:"pointer",fontFamily:"inherit"}}>{s}</button>)}</div>
-      {filtered.length===0?<EmptyState icon="◇" msg="No deals in pipeline."/>:<Card style={{padding:0,overflow:"hidden"}}><table style={tableStyle}><thead><tr><th style={{...thStyle,borderRadius:"16px 0 0 0"}}>Property</th><th style={thStyle}>Seller</th><th style={thStyle}>Offer</th><th style={thStyle}>Profit</th><th style={thStyle}>Status</th><th style={{...thStyle,borderRadius:"0 16px 0 0"}}>Actions</th></tr></thead><tbody>{filtered.map(d=>{const sn=getSellerName(d.sellerId);return<tr key={d.id}><td style={tdStyle}><div><span style={{fontWeight:500}}>{d.address||"—"}</span>{d.acres&&<div style={{fontSize:11,color:C.textMuted}}>{d.acres} ac</div>}{d.aiEstimate&&<Badge color={C.purple} onClick={()=>setAiModal(d)}>AI</Badge>}</div></td><td style={tdStyle}>{sn?<span style={{color:C.gold,cursor:"pointer",fontSize:12}} onClick={()=>nav("sellers")}>{sn}</span>:<span style={{color:C.textMuted}}>—</span>}</td><td style={tdStyle}>{fmt$(d.offerPrice)}</td><td style={tdStyle}><span style={{color:Number(d.profit)>0?C.green:C.red,fontWeight:600}}>{fmt$(d.profit)}</span></td><td style={tdStyle}><Badge color={STATUS_COLORS[d.status]}>{d.status}</Badge></td><td style={tdStyle}><div style={{display:"flex",gap:6}}><button style={btnSmall} onClick={()=>{setForm(d);setModal(d.id);}}>Edit</button><button style={btnDanger} onClick={()=>del(d.id)}>Del</button></div></td></tr>})}</tbody></table></Card>}
-      {modal&&<Modal title={modal==="new"?"Add Deal":"Edit Deal"} onClose={()=>setModal(null)}><FormField label="Property Address" full><input style={inputStyle} value={form.address} onChange={e=>setForm(p=>({...p,address:e.target.value}))}/></FormField><div style={formRow}><FormField label="Acres"><input style={inputStyle} type="number" value={form.acres} onChange={e=>setForm(p=>({...p,acres:e.target.value}))}/></FormField><FormField label="FMV"><input style={inputStyle} type="number" value={form.fmv} onChange={e=>setForm(p=>({...p,fmv:e.target.value}))}/></FormField></div><div style={formRow}><FormField label="Your Offer"><input style={inputStyle} type="number" value={form.offerPrice} onChange={e=>setForm(p=>({...p,offerPrice:e.target.value}))}/></FormField><FormField label="Buyer Price"><input style={inputStyle} type="number" value={form.buyerPrice} onChange={e=>setForm(p=>({...p,buyerPrice:e.target.value}))}/></FormField></div><div style={formRow}><FormField label="Status"><select style={selectStyle} value={form.status} onChange={e=>setForm(p=>({...p,status:e.target.value}))}>{DEAL_STATUSES.map(s=><option key={s}>{s}</option>)}</select></FormField><FormField label="Buyer"><select style={selectStyle} value={form.buyerId} onChange={e=>setForm(p=>({...p,buyerId:e.target.value}))}><option value="">— None —</option>{activeBuyers.map(b=><option key={b.id} value={b.id}>{b.name}</option>)}</select></FormField></div><FormField label="Linked Seller" full><select style={selectStyle} value={form.sellerId||""} onChange={e=>setForm(p=>({...p,sellerId:e.target.value}))}><option value="">— None —</option>{sellers.filter(s=>!s.archived).map(s=><option key={s.id} value={s.id}>{s.name||s.address||s.phone}</option>)}</select></FormField><div style={formRow}><FormField label="Date Entered"><input style={inputStyle} type="date" value={form.dateEntered} onChange={e=>setForm(p=>({...p,dateEntered:e.target.value}))}/></FormField><FormField label="Target Close"><input style={inputStyle} type="date" value={form.targetClose} onChange={e=>setForm(p=>({...p,targetClose:e.target.value}))}/></FormField></div><FormField label="Notes" full><textarea style={textareaStyle} value={form.notes} onChange={e=>setForm(p=>({...p,notes:e.target.value}))}/></FormField><button style={btnStyle} onClick={saveDeal}>Save Deal</button></Modal>}
-      {aiModal&&<Modal title="AI Property Estimate" onClose={()=>setAiModal(null)} wide>
+      {filtered.length===0?<EmptyState icon="◇" msg="No deals in pipeline."/>:<Card style={{padding:0,overflow:"hidden"}}><table style={tableStyle}><thead><tr><th style={{...thStyle,borderRadius:"16px 0 0 0"}}>Property</th><th style={thStyle}>Seller</th><th style={thStyle}>Offer</th><th style={thStyle}>Profit</th><th style={thStyle}>Status</th><th style={{...thStyle,borderRadius:"0 16px 0 0"}}>Actions</th></tr></thead><tbody>{filtered.map(d=>{const sn=getSellerName(d.sellerId);return<tr key={d.id}><td style={tdStyle}><div><span style={{fontWeight:500}}>{d.address||"—"}</span>{d.acres&&<div style={{fontSize:11,color:C.textMuted}}>{d.acres} ac</div>}{d.aiEstimate&&<span onClick={()=>setAiModal(d)} style={{cursor:"pointer"}}><Badge color={C.purple}>AI</Badge></span>}</div></td><td style={tdStyle}>{sn?<span style={{color:C.gold,cursor:"pointer",fontSize:12}} onClick={()=>nav("sellers")}>{sn}</span>:<span style={{color:C.textMuted}}>—</span>}</td><td style={tdStyle}>{fmt$(d.offerPrice)}</td><td style={tdStyle}><span style={{color:Number(d.profit)>0?C.green:C.red,fontWeight:600}}>{fmt$(d.profit)}</span></td><td style={tdStyle}><Badge color={STATUS_COLORS[d.status]}>{d.status}</Badge></td><td style={tdStyle}><div style={{display:"flex",gap:6}}><button style={btnSmall} onClick={()=>{setForm({...d,activity:d.activity||[]});setModal(d.id);}}>Edit</button><button style={btnDanger} onClick={()=>del(d.id)}>Del</button></div></td></tr>})}</tbody></table></Card>}
+      {modal&&<Modal title={modal==="new"?"Add Deal":"Edit Deal"} onClose={()=>{setModal(null);setActNote("");}}>
+        <FormField label="Property Address" full><input style={inputStyle} value={form.address} onChange={e=>setForm(p=>({...p,address:e.target.value}))}/></FormField><div style={formRow}><FormField label="Acres"><input style={inputStyle} type="number" value={form.acres} onChange={e=>setForm(p=>({...p,acres:e.target.value}))}/></FormField><FormField label="FMV"><input style={inputStyle} type="number" value={form.fmv} onChange={e=>setForm(p=>({...p,fmv:e.target.value}))}/></FormField></div><div style={formRow}><FormField label="Your Offer"><input style={inputStyle} type="number" value={form.offerPrice} onChange={e=>setForm(p=>({...p,offerPrice:e.target.value}))}/></FormField><FormField label="Buyer Price"><input style={inputStyle} type="number" value={form.buyerPrice} onChange={e=>setForm(p=>({...p,buyerPrice:e.target.value}))}/></FormField></div><div style={formRow}><FormField label="Status"><select style={selectStyle} value={form.status} onChange={e=>setForm(p=>({...p,status:e.target.value}))}>{DEAL_STATUSES.map(s=><option key={s}>{s}</option>)}</select></FormField><FormField label="Buyer"><select style={selectStyle} value={form.buyerId} onChange={e=>setForm(p=>({...p,buyerId:e.target.value}))}><option value="">— None —</option>{activeBuyers.map(b=><option key={b.id} value={b.id}>{b.name}</option>)}</select></FormField></div><FormField label="Linked Seller" full><select style={selectStyle} value={form.sellerId||""} onChange={e=>setForm(p=>({...p,sellerId:e.target.value}))}><option value="">— None —</option>{sellers.filter(s=>!s.archived).map(s=><option key={s.id} value={s.id}>{s.name||s.address||s.phone}</option>)}</select></FormField><div style={formRow}><FormField label="Date Entered"><input style={inputStyle} type="date" value={form.dateEntered} onChange={e=>setForm(p=>({...p,dateEntered:e.target.value}))}/></FormField><FormField label="Target Close"><input style={inputStyle} type="date" value={form.targetClose} onChange={e=>setForm(p=>({...p,targetClose:e.target.value}))}/></FormField></div><FormField label="Notes" full><textarea style={textareaStyle} value={form.notes} onChange={e=>setForm(p=>({...p,notes:e.target.value}))}/></FormField>
+        {/* Activity Log */}
+        {modal!=="new"&&<div style={{marginTop:8,marginBottom:14}}>
+          <div style={{fontSize:13,color:C.goldLight,fontWeight:500,fontFamily:FH,marginBottom:10}}>Activity Log</div>
+          <div style={{display:"flex",gap:8,marginBottom:10}}><input style={{...inputStyle,flex:1}} placeholder="Add a note..." value={actNote} onChange={e=>setActNote(e.target.value)} onKeyDown={e=>e.key==="Enter"&&addActivity()}/><button style={btnSmall} onClick={addActivity}>Add</button></div>
+          {(form.activity||[]).length===0?<p style={{fontSize:12,color:C.textMuted}}>No activity yet.</p>:[...(form.activity||[])].sort((a,b)=>(b.date||"").localeCompare(a.date||"")).slice(0,15).map(a=><div key={a.id} style={{display:"flex",gap:10,alignItems:"flex-start",padding:"8px 0",borderBottom:`1px solid ${C.goldBorder}`,fontSize:12}}><div style={{minWidth:70,color:C.textMuted}}>{fmtDate(a.date?.split("T")[0])}</div><Badge color={actColor[a.type]||C.gold}>{a.type}</Badge><div style={{color:C.text,flex:1}}>{a.note}</div></div>)}
+        </div>}
+        <button style={btnStyle} onClick={saveDeal}>Save Deal</button>
+      </Modal>}
+      {aiModal&&<Modal title="AI Property Estimate" onClose={()=>setAiModal(null)}>
         <div className="dash-two-col" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:18}}>
           <div><div style={{fontSize:13,color:C.gold,fontWeight:600,marginBottom:10}}>Valuation</div>{[["Redfin Estimate",aiModal.aiEstimate?.redfin_estimate],["Redfin Derived (50%)",aiModal.aiEstimate?.redfin_derived],["Comparable Sales",aiModal.aiEstimate?.comparable_sales_avg],["County Assessed",aiModal.aiEstimate?.county_assessed],["Est. FMV Low",aiModal.aiEstimate?.estimated_fmv_low],["Est. FMV High",aiModal.aiEstimate?.estimated_fmv_high],["Price/Acre",aiModal.aiEstimate?.price_per_acre]].map(([l,v])=><div key={l} style={{display:"flex",justifyContent:"space-between",padding:"6px 0",borderBottom:`1px solid ${C.goldBorder}`,fontSize:12}}><span style={{color:C.textSec}}>{l}</span><span style={{color:C.text,fontWeight:500}}>{v!=null?fmt$(v):"—"}</span></div>)}</div>
           <div><div style={{fontSize:13,color:C.gold,fontWeight:600,marginBottom:10}}>Property Flags</div>{[["HOA",aiModal.aiEstimate?.hoa],["Lot Type",aiModal.aiEstimate?.lot_type],["Zoning",aiModal.aiEstimate?.zoning],["Buildable",aiModal.aiEstimate?.buildable],["Flood Zone",aiModal.aiEstimate?.flood_zone],["Wetlands",aiModal.aiEstimate?.wetlands],["CIAC",aiModal.aiEstimate?.ciac]].map(([l,v])=><div key={l} style={{display:"flex",justifyContent:"space-between",padding:"6px 0",borderBottom:`1px solid ${C.goldBorder}`,fontSize:12}}><span style={{color:C.textSec}}>{l}</span><span style={{color:flagColor(v),fontWeight:500}}>{v||"—"}</span></div>)}</div>
@@ -774,21 +796,31 @@ export default function MonarchOS() {
   // ═══ TEMPLATES (SHARED, EDITABLE) ═══
   const TemplatesPage = () => {
     const [copied,setCopied]=useState(null);const [editing,setEditing]=useState(null);const [editText,setEditText]=useState("");
+    const [fillKey,setFillKey]=useState(null);const [fillData,setFillData]=useState({name:"",address:"",phone:"",email:""});
     const [savedTemplates,setSavedTemplates]=useState({});
     useEffect(()=>{const unsub=subscribe(sPath("templates"),(data)=>{if(data)setSavedTemplates(data);});return unsub;},[]);
     const merged={...TEMPLATES};Object.entries(savedTemplates).forEach(([k,v])=>{if(merged[k])merged[k]={...merged[k],content:v};});
     const copy=k=>{navigator.clipboard.writeText(merged[k].content).catch(()=>{});setCopied(k);setTimeout(()=>setCopied(null),2000);};
     const startEdit=k=>{setEditing(k);setEditText(merged[k].content);};
     const saveEdit=()=>{const updated={...savedTemplates,[editing]:editText};setSavedTemplates(updated);saveData(sPath("templates"),updated);setEditing(null);addToast("Template saved");};
+    const copyFilled=()=>{const filled=fillTemplate(merged[fillKey].content,fillData);navigator.clipboard.writeText(filled).catch(()=>{});addToast("Filled template copied");setFillKey(null);setFillData({name:"",address:"",phone:"",email:""});};
     return(<div><TopBar title="Outreach Templates"/>{Object.entries(merged).map(([k,t])=>(<Card key={k} style={{marginBottom:14}}>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
         <div style={{fontSize:15,color:C.goldLight,fontWeight:500,fontFamily:FH}}>{t.title}</div>
         <div style={{display:"flex",gap:8}}>
-          {editing===k?<><button style={btnStyle} onClick={saveEdit}>Save</button><button style={btnOutline} onClick={()=>setEditing(null)}>Cancel</button></>:<><button style={btnOutline} onClick={()=>startEdit(k)}>Edit</button><button style={btnStyle} onClick={()=>copy(k)}>{copied===k?"✓ Copied":"Copy"}</button></>}
+          {editing===k?<><button style={btnStyle} onClick={saveEdit}>Save</button><button style={btnOutline} onClick={()=>setEditing(null)}>Cancel</button></>:<><button style={btnOutline} onClick={()=>startEdit(k)}>Edit</button><button style={btnOutline} onClick={()=>{setFillKey(k);setFillData({name:"",address:"",phone:"",email:""});}}>Fill & Copy</button><button style={btnStyle} onClick={()=>copy(k)}>{copied===k?"✓ Copied":"Copy"}</button></>}
         </div>
       </div>
       {editing===k?<textarea style={{...textareaStyle,minHeight:200,fontSize:13,lineHeight:1.7}} value={editText} onChange={e=>setEditText(e.target.value)}/>:<pre style={{whiteSpace:"pre-wrap",fontSize:13,color:C.textSec,lineHeight:1.7,margin:0,fontFamily:"inherit"}}>{t.content}</pre>}
-    </Card>))}<HelpButton pageId="templates"/></div>);
+    </Card>))}
+    {fillKey&&<Modal title={`Fill & Copy: ${merged[fillKey]?.title}`} onClose={()=>setFillKey(null)}>
+      <div style={formRow}><FormField label="Name"><input style={inputStyle} value={fillData.name} onChange={e=>setFillData(p=>({...p,name:e.target.value}))}/></FormField><FormField label="Phone"><input style={inputStyle} value={fillData.phone} onChange={e=>setFillData(p=>({...p,phone:e.target.value}))}/></FormField></div>
+      <FormField label="Address" full><input style={inputStyle} value={fillData.address} onChange={e=>setFillData(p=>({...p,address:e.target.value}))}/></FormField>
+      <FormField label="Email" full><input style={inputStyle} value={fillData.email} onChange={e=>setFillData(p=>({...p,email:e.target.value}))}/></FormField>
+      <div style={{background:C.bgInput,border:`1px solid ${C.goldBorder}`,borderRadius:12,padding:14,marginTop:12,maxHeight:250,overflowY:"auto"}}><pre style={{whiteSpace:"pre-wrap",fontSize:12,color:C.textSec,lineHeight:1.6,margin:0,fontFamily:"inherit"}}>{fillTemplate(merged[fillKey]?.content||"",fillData)}</pre></div>
+      <button style={{...btnStyle,marginTop:14,width:"100%"}} onClick={copyFilled}>Copy Filled Template</button>
+    </Modal>}
+    <HelpButton pageId="templates"/></div>);
   };
 
   // ═══ METRICS (PERSONAL) ═══
@@ -884,27 +916,83 @@ export default function MonarchOS() {
     </div>);
   };
 
-  // ═══ MERGED: ANALYTICS (Metrics + Financial + Velocity) ═══
+  // ═══ MERGED: ANALYTICS (Enhanced SVG Charts) ═══
   const AnalyticsPage = () => {
     const [tab,setTab]=useState("performance");
     const conv=calls.length?((closedDeals.length/calls.length)*100).toFixed(1):"0";const avg=closedDeals.length?totalProfit/closedDeals.length:0;const cpa=closedDeals.length&&calls.length?(calls.length/closedDeals.length).toFixed(1):"—";
     const pbb={};closedDeals.forEach(d=>{const b=buyers.find(x=>x.id===d.buyerId);const n=b?b.name:"Unlinked";pbb[n]=(pbb[n]||0)+Number(d.profit||0);});
     const sc={};DEAL_STATUSES.forEach(s=>sc[s]=deals.filter(d=>d.status===s).length);const total=deals.length||1;const vconv=DEAL_STATUSES.map((s,i)=>({stage:s,count:sc[s],rate:i===0?"—":sc[DEAL_STATUSES[i-1]]?(sc[s]/sc[DEAL_STATUSES[i-1]]*100).toFixed(0)+"%":"—"}));
     const pillStyle=(active)=>({padding:"8px 20px",borderRadius:10,border:`1px solid ${active?C.gold:C.goldBorder}`,background:active?"rgba(212,175,55,0.1)":"transparent",color:active?C.gold:C.textSec,fontSize:12,cursor:"pointer",fontFamily:"inherit",fontWeight:active?600:400});
+
+    // Call outcomes data
+    const outcomes={};calls.forEach(c=>{const r=c.result||"Unknown";outcomes[r]=(outcomes[r]||0)+1;});const outcomeEntries=Object.entries(outcomes).sort((a,b)=>b[1]-a[1]);const totalCalls=calls.length||1;
+    // Best day of week
+    const dayNames=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];const dayCounts=[0,0,0,0,0,0,0];calls.forEach(c=>{if(c.date){const d=new Date(c.date+"T00:00:00").getDay();dayCounts[d]++;}});const maxDay=Math.max(...dayCounts)||1;
+    // Follow-up conversion
+    const fuSellers=sellers.filter(s=>s.followUp);const fuConverted=fuSellers.filter(s=>["Interested","Negotiating","Under Contract"].includes(s.status));const fuRate=fuSellers.length?(fuConverted.length/fuSellers.length*100).toFixed(0):"0";
+
     return(<div><TopBar title="Analytics"/>
       <div style={{display:"flex",gap:8,marginBottom:22}}>{[{k:"performance",l:"Performance"},{k:"financial",l:"Financial"},{k:"velocity",l:"Velocity"}].map(t=><button key={t.k} style={pillStyle(tab===t.k)} onClick={()=>setTab(t.k)}>{t.l}</button>)}</div>
+
       {tab==="performance"&&<div>
         <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(155px,1fr))",gap:14,marginBottom:22}}>{[{v:calls.length,l:"Total Calls"},{v:conv+"%",l:"Conversion"},{v:fmt$(avg),l:"Avg Profit"},{v:fmt$(pipelineProfit),l:"Pipeline Profit"},{v:closedDeals.length,l:"Closed"},{v:fmt$(totalRevenue),l:"Revenue"},{v:fmt$(totalProfit),l:"Profit YTD"},{v:weekCalls.length,l:"This Week"}].map((s,i)=>(<Card key={i} style={{padding:18,textAlign:"center"}}><div style={{fontSize:26,fontWeight:400,color:C.goldLight,fontFamily:FH}}>{s.v}</div><div style={{fontSize:11,color:C.textSec,letterSpacing:1,textTransform:"uppercase",marginTop:4}}>{s.l}</div></Card>))}</div>
+
+        {/* Call Outcome Breakdown */}
+        {calls.length>0&&<Card style={{marginBottom:14}}><div style={{fontSize:16,color:C.text,fontWeight:500,fontFamily:FH,marginBottom:14}}>Call Outcomes</div>
+          <svg viewBox="0 0 500 32" style={{width:"100%",borderRadius:8,overflow:"hidden"}}>{(()=>{let x=0;return outcomeEntries.map(([r,cnt])=>{const w=(cnt/totalCalls)*500;const el=<g key={r}><rect x={x} y={0} width={w} height={32} fill={STATUS_COLORS[r]||C.textMuted}/>{w>40&&<text x={x+w/2} y={20} textAnchor="middle" fill="#fff" fontSize="10" fontWeight="600">{Math.round(cnt/totalCalls*100)}%</text>}</g>;x+=w;return el;});})()}</svg>
+          <div style={{display:"flex",gap:14,flexWrap:"wrap",marginTop:10}}>{outcomeEntries.map(([r,cnt])=><div key={r} style={{display:"flex",alignItems:"center",gap:5,fontSize:11}}><div style={{width:8,height:8,borderRadius:4,background:STATUS_COLORS[r]||C.textMuted}}/><span style={{color:C.textSec}}>{r}: {cnt}</span></div>)}</div>
+        </Card>}
+
+        {/* Best Day of Week */}
+        {calls.length>0&&<Card style={{marginBottom:14}}><div style={{fontSize:16,color:C.text,fontWeight:500,fontFamily:FH,marginBottom:14}}>Best Days to Call</div>
+          <svg viewBox="0 0 350 120" style={{width:"100%"}}>{dayNames.map((d,i)=>{const h=(dayCounts[i]/maxDay)*80;const isMax=dayCounts[i]===maxDay&&dayCounts[i]>0;return<g key={d}><rect x={i*50+10} y={100-h} width={30} height={h} rx={4} fill={isMax?C.goldLight:C.gold} opacity={isMax?1:0.6}/><text x={i*50+25} y={115} textAnchor="middle" fill={C.textMuted} fontSize="9">{d}</text><text x={i*50+25} y={95-h} textAnchor="middle" fill={C.textSec} fontSize="9">{dayCounts[i]||""}</text>{isMax&&<text x={i*50+25} y={88-h} textAnchor="middle" fill={C.goldLight} fontSize="8" fontWeight="700">Best</text>}</g>;})}</svg>
+        </Card>}
+
+        {/* Follow-Up Conversion */}
+        <Card style={{marginBottom:14}}><div style={{fontSize:16,color:C.text,fontWeight:500,fontFamily:FH,marginBottom:14}}>Follow-Up Conversion</div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:14,textAlign:"center"}}>
+            <div><div style={{fontSize:28,color:C.blue,fontFamily:FH}}>{fuSellers.length}</div><div style={{fontSize:11,color:C.textSec,letterSpacing:1}}>SCHEDULED</div></div>
+            <div><div style={{fontSize:28,color:C.green,fontFamily:FH}}>{fuConverted.length}</div><div style={{fontSize:11,color:C.textSec,letterSpacing:1}}>CONVERTED</div></div>
+            <div><div style={{fontSize:28,color:C.goldLight,fontFamily:FH}}>{fuRate}%</div><div style={{fontSize:11,color:C.textSec,letterSpacing:1}}>RATE</div></div>
+          </div>
+        </Card>
+
         {Object.keys(pbb).length>0&&<Card><div style={{fontSize:16,color:C.text,fontWeight:500,fontFamily:FH,marginBottom:14}}>Profit by Buyer</div>{Object.entries(pbb).sort((a,b)=>b[1]-a[1]).map(([n,p])=><div key={n} style={{display:"flex",justifyContent:"space-between",padding:"12px 0",borderBottom:`1px solid ${C.goldBorder}`}}><span>{n}</span><span style={{color:C.goldLight,fontWeight:600}}>{fmt$(p)}</span></div>)}</Card>}
       </div>}
+
       {tab==="financial"&&<div>
         <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(160px,1fr))",gap:14,marginBottom:22}}>{[{v:fmt$(totalRevenue),l:"Total Revenue",c:C.green},{v:fmt$(totalProfit),l:"Profit YTD",c:C.goldLight},{v:fmt$(avg),l:"Avg Profit/Deal",c:C.blue},{v:cpa,l:"Calls per Deal",c:C.orange}].map((s,i)=>(<Card key={i} style={{padding:20,textAlign:"center"}}><div style={{fontSize:28,fontWeight:400,color:s.c,fontFamily:FH}}>{s.v}</div><div style={{fontSize:11,color:C.textSec,letterSpacing:1,textTransform:"uppercase",marginTop:4}}>{s.l}</div></Card>))}</div>
+
+        {/* Cumulative Revenue */}
+        {closedDeals.length>1&&<Card style={{marginBottom:14}}><div style={{fontSize:16,color:C.text,fontWeight:500,fontFamily:FH,marginBottom:14}}>Cumulative Revenue</div>
+          {(()=>{const sorted=[...closedDeals].filter(d=>d.dateEntered).sort((a,b)=>a.dateEntered.localeCompare(b.dateEntered));let cum=0;const pts=sorted.map((d,i)=>{cum+=Number(d.buyerPrice||0);return{x:i,y:cum};});const maxY=cum||1;const w=480,h=120,px=20,py=10;return<svg viewBox={`0 0 ${w} ${h+20}`} style={{width:"100%"}}>
+            <defs><linearGradient id="revG" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={C.gold} stopOpacity="0.2"/><stop offset="100%" stopColor={C.gold} stopOpacity="0"/></linearGradient></defs>
+            <path d={`M ${px} ${h-py} ${pts.map(p=>`L ${px+(p.x/(pts.length-1||1))*(w-2*px)} ${h-py-(p.y/maxY)*(h-2*py)}`).join(" ")} L ${w-px} ${h-py} Z`} fill="url(#revG)"/>
+            <polyline points={pts.map(p=>`${px+(p.x/(pts.length-1||1))*(w-2*px)},${h-py-(p.y/maxY)*(h-2*py)}`).join(" ")} fill="none" stroke={C.gold} strokeWidth="2"/>
+            {pts.map(p=><circle key={p.x} cx={px+(p.x/(pts.length-1||1))*(w-2*px)} cy={h-py-(p.y/maxY)*(h-2*py)} r="3" fill={C.gold}/>)}
+            <text x={w-px} y={h-py-(cum/maxY)*(h-2*py)-6} textAnchor="end" fill={C.goldLight} fontSize="10">{fmt$(cum)}</text>
+          </svg>;})()}
+        </Card>}
+
+        {/* Deal Profit Distribution */}
+        {closedDeals.length>0&&<Card style={{marginBottom:14}}><div style={{fontSize:16,color:C.text,fontWeight:500,fontFamily:FH,marginBottom:14}}>Deal Profit Distribution</div>
+          {(()=>{const buckets=[{l:"$0-25k",min:0,max:25000},{l:"$25-50k",min:25000,max:50000},{l:"$50-100k",min:50000,max:100000},{l:"$100-200k",min:100000,max:200000},{l:"$200k+",min:200000,max:Infinity}];const counts=buckets.map(b=>({...b,count:closedDeals.filter(d=>{const p=Number(d.profit||0);return p>=b.min&&p<b.max;}).length}));const maxC=Math.max(...counts.map(c=>c.count))||1;return<svg viewBox="0 0 400 110" style={{width:"100%"}}>{counts.map((b,i)=>{const h=(b.count/maxC)*70;return<g key={i}><rect x={i*80+10} y={90-h} width={60} height={h} rx={4} fill={C.purple} opacity={0.7}/><text x={i*80+40} y={105} textAnchor="middle" fill={C.textMuted} fontSize="8">{b.l}</text><text x={i*80+40} y={85-h} textAnchor="middle" fill={C.textSec} fontSize="9">{b.count||""}</text></g>;})}</svg>;})()}
+        </Card>}
+
         {Object.keys(pbb).length>0&&<Card><div style={{fontSize:16,color:C.text,fontWeight:500,fontFamily:FH,marginBottom:14}}>Profit by Buyer</div>{Object.entries(pbb).sort((a,b)=>b[1]-a[1]).map(([n,p])=><div key={n} style={{display:"flex",justifyContent:"space-between",padding:"12px 0",borderBottom:`1px solid ${C.goldBorder}`}}><span>{n}</span><span style={{color:C.goldLight,fontSize:18,fontWeight:600}}>{fmt$(p)}</span></div>)}</Card>}
       </div>}
+
       {tab==="velocity"&&<div>
         <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(130px,1fr))",gap:14,marginBottom:22}}>{DEAL_STATUSES.map(s=><Card key={s} style={{padding:18,textAlign:"center"}}><div style={{fontSize:26,fontWeight:400,color:STATUS_COLORS[s],fontFamily:FH}}>{sc[s]}</div><div style={{fontSize:11,color:C.textSec,letterSpacing:1,textTransform:"uppercase",marginTop:4}}>{s}</div></Card>)}</div>
-        <Card style={{padding:0,overflow:"hidden"}}><table style={tableStyle}><thead><tr><th style={{...thStyle,borderRadius:"16px 0 0 0"}}>Stage</th><th style={thStyle}>Deals</th><th style={thStyle}>Conversion</th><th style={{...thStyle,borderRadius:"0 16px 0 0"}}>Progress</th></tr></thead><tbody>{vconv.map(c=><tr key={c.stage}><td style={tdStyle}><Badge color={STATUS_COLORS[c.stage]}>{c.stage}</Badge></td><td style={tdStyle}>{c.count}</td><td style={tdStyle}>{c.rate}</td><td style={tdStyle}><div style={{height:6,borderRadius:3,background:"rgba(255,255,255,0.04)",width:"100%"}}><div style={{height:6,borderRadius:3,background:STATUS_COLORS[c.stage],width:(c.count/total*100)+"%"}}/></div></td></tr>)}</tbody></table></Card>
-        {deals.filter(d=>d.status!=="Closed"&&d.dateEntered).length>0&&<Card style={{marginTop:14}}><div style={{fontSize:16,color:C.text,fontWeight:500,fontFamily:FH,marginBottom:14}}>Active Deal Age</div>{deals.filter(d=>d.status!=="Closed"&&d.dateEntered).map(d=>{const days=Math.floor((Date.now()-new Date(d.dateEntered))/864e5);return<div key={d.id} style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderBottom:`1px solid ${C.goldBorder}`}}><span>{d.address}</span><span style={{color:days>30?C.red:days>14?C.orange:C.green}}>{days}d <Badge color={STATUS_COLORS[d.status]}>{d.status}</Badge></span></div>;})}</Card>}
+
+        {/* Deal Conversion Funnel */}
+        <Card style={{marginBottom:14}}><div style={{fontSize:16,color:C.text,fontWeight:500,fontFamily:FH,marginBottom:14}}>Deal Conversion Funnel</div>
+          <svg viewBox="0 0 400 180" style={{width:"100%"}}>{DEAL_STATUSES.map((s,i)=>{const w=360-i*50;const x=(400-w)/2;const y=i*34;const prevC=i>0?sc[DEAL_STATUSES[i-1]]:0;const convR=i===0?"":prevC?(sc[s]/prevC*100).toFixed(0)+"%":"0%";return<g key={s}><rect x={x} y={y} width={w} height={28} rx={6} fill={STATUS_COLORS[s]} opacity={0.7}/><text x={200} y={y+18} textAnchor="middle" fill="#fff" fontSize="11" fontWeight="600">{s}: {sc[s]}{convR&&` (${convR})`}</text></g>;})}</svg>
+        </Card>
+
+        <Card style={{padding:0,overflow:"hidden",marginBottom:14}}><table style={tableStyle}><thead><tr><th style={{...thStyle,borderRadius:"16px 0 0 0"}}>Stage</th><th style={thStyle}>Deals</th><th style={thStyle}>Conversion</th><th style={{...thStyle,borderRadius:"0 16px 0 0"}}>Progress</th></tr></thead><tbody>{vconv.map(c=><tr key={c.stage}><td style={tdStyle}><Badge color={STATUS_COLORS[c.stage]}>{c.stage}</Badge></td><td style={tdStyle}>{c.count}</td><td style={tdStyle}>{c.rate}</td><td style={tdStyle}><div style={{height:6,borderRadius:3,background:"rgba(255,255,255,0.04)",width:"100%"}}><div style={{height:6,borderRadius:3,background:STATUS_COLORS[c.stage],width:(c.count/total*100)+"%"}}/></div></td></tr>)}</tbody></table></Card>
+
+        {deals.filter(d=>d.status!=="Closed"&&d.dateEntered).length>0&&<Card><div style={{fontSize:16,color:C.text,fontWeight:500,fontFamily:FH,marginBottom:14}}>Active Deal Age</div>{deals.filter(d=>d.status!=="Closed"&&d.dateEntered).map(d=>{const days=Math.floor((Date.now()-new Date(d.dateEntered))/864e5);return<div key={d.id} style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderBottom:`1px solid ${C.goldBorder}`}}><span>{d.address}</span><span style={{color:days>30?C.red:days>14?C.orange:C.green}}>{days}d <Badge color={STATUS_COLORS[d.status]}>{d.status}</Badge></span></div>;})}</Card>}
       </div>}
       <HelpButton pageId="analytics"/>
     </div>);
