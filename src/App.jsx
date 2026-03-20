@@ -42,7 +42,18 @@ const HELP_CONTENT = {
   feedback:{title:"Feedback Loop",desc:"Record lessons learned and script effectiveness after deals. Personal to each profile.",features:["Link feedback to specific deals","Track won/lost/stalled outcomes","Record lessons learned","Rate script effectiveness","Post-mortem analysis"]},
   bulk:{title:"Bulk Operations",desc:"Import multiple sellers at once and schedule bulk follow-ups.",features:["Bulk import from CSV/tab data","Mass follow-up scheduling","Import directly to your seller list"]},
   data:{title:"Data Management",desc:"Export data and manage storage across all sections.",features:["Export any data type to CSV","View record counts per section","Clear all data with confirmation"]},
-  buyers:{title:"Buyer Management",desc:"Manage your buyer network. Buyers are shared across both profiles.",features:["Add and edit buyer profiles","Set lot size and price criteria","Specify preferred locations","Toggle buyers active/inactive","Link buyers to deals and sellers"]}
+  buyers:{title:"Buyer Management",desc:"Manage your buyer network. Buyers are shared across both profiles.",features:["Add and edit buyer profiles","Set lot size and price criteria","Specify preferred locations","Toggle buyers active/inactive","Link buyers to deals and sellers"]},
+  map:{title:"Seller Map",desc:"Visualize your sellers and buyer territories on an interactive map.",features:["See all geocoded sellers as colored pins (color = status)","Buyer territories shown as gold circles","Click pins for seller details and quick call","Filter by status, toggle buyers, show archived","Auto-geocoding runs in background for new sellers"]}
+};
+
+const COUNTY_COORDS = {
+  "broward":[26.19,-80.36],"miami-dade":[25.77,-80.29],"miami dade":[25.77,-80.29],"palm beach":[26.71,-80.06],
+  "orange":[28.38,-81.38],"hillsborough":[27.90,-82.35],"pinellas":[27.88,-82.72],"duval":[30.33,-81.66],
+  "lee":[26.57,-81.87],"collier":[26.11,-81.40],"osceola":[28.06,-81.07],"brevard":[28.26,-80.74],
+  "polk":[27.95,-81.70],"volusia":[29.03,-81.09],"seminole":[28.71,-81.24],"sarasota":[27.18,-82.37],
+  "manatee":[27.48,-82.39],"pasco":[28.30,-82.43],"lake":[28.77,-81.72],"st. lucie":[27.38,-80.39],
+  "st lucie":[27.38,-80.39],"martin":[27.08,-80.41],"indian river":[27.69,-80.57],"charlotte":[26.89,-82.01],
+  "hernando":[28.55,-82.47],"citrus":[28.85,-82.52],"marion":[29.21,-82.06],"alachua":[29.67,-82.37],
 };
 
 const Icons = {
@@ -63,6 +74,7 @@ const Icons = {
   bulk: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v16"/></svg>,
   data: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>,
   bell: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>,
+  mapPin: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>,
 };
 
 const NAV_ITEMS = [
@@ -77,6 +89,7 @@ const NAV_ITEMS = [
   {id:"matching",label:"Buyer Match",icon:Icons.matching},
   {id:"financial",label:"Financial",icon:Icons.financial},
   {id:"calendar",label:"Calendar",icon:Icons.calendar},
+  {id:"map",label:"Map",icon:Icons.mapPin},
   {id:"velocity",label:"Velocity",icon:Icons.velocity},
   {id:"market",label:"Market",icon:Icons.market},
   {id:"feedback",label:"Feedback",icon:Icons.feedback},
@@ -244,6 +257,35 @@ export default function MonarchOS() {
 
   const otherProfile = PROFILES.find(p=>p!==profile) || "";
 
+  // ─── Geocoding queue ───
+  const [geoProgress, setGeoProgress] = useState({current:0,total:0,active:false});
+  const geoTimeout = useRef(null);
+  useEffect(()=>{
+    if(!profile||!sellers.length) return;
+    const queue=sellers.filter(s=>!s.archived&&s.address&&s.lat===undefined&&s.lon===undefined);
+    if(!queue.length) return;
+    setGeoProgress({current:0,total:queue.length,active:true});
+    let i=0;
+    const processNext=()=>{
+      if(i>=queue.length){setGeoProgress(p=>({...p,active:false}));return;}
+      const s=queue[i];
+      fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(s.address)}`,{headers:{"Accept":"application/json"}})
+        .then(r=>r.json()).then(data=>{
+          const lat=data[0]?parseFloat(data[0].lat):null;
+          const lon=data[0]?parseFloat(data[0].lon):null;
+          setSellers(prev=>prev.map(x=>x.id===s.id?{...x,lat,lon}:x));
+          i++;setGeoProgress(p=>({...p,current:i}));
+          geoTimeout.current=setTimeout(processNext,1100);
+        }).catch(()=>{
+          setSellers(prev=>prev.map(x=>x.id===s.id?{...x,lat:null,lon:null}:x));
+          i++;setGeoProgress(p=>({...p,current:i}));
+          geoTimeout.current=setTimeout(processNext,1100);
+        });
+    };
+    geoTimeout.current=setTimeout(processNext,500);
+    return()=>{if(geoTimeout.current)clearTimeout(geoTimeout.current);};
+  },[sellers.filter(s=>!s.archived&&s.address&&s.lat===undefined).length]);
+
   const nav = id => { setPage(id); setMobileNav(false); };
   const activeBuyers = buyers.filter(b => b.active !== false);
   const weekCalls = calls.filter(c => { const d=new Date(c.date); return d>=new Date(Date.now()-7*864e5); });
@@ -319,6 +361,7 @@ export default function MonarchOS() {
           </div>
         ))}
       </nav>
+      {!sidebarCollapsed&&geoProgress.active&&<div style={{padding:"8px 20px",borderTop:`1px solid ${C.goldBorder}`}}><div style={{fontSize:11,color:C.textMuted}}>Geocoding {geoProgress.current}/{geoProgress.total}</div><div style={{height:3,borderRadius:2,background:"rgba(255,255,255,0.05)",marginTop:4}}><div style={{height:3,borderRadius:2,background:C.gold,width:`${(geoProgress.current/geoProgress.total)*100}%`,transition:"width 0.5s"}}/></div></div>}
       {!mobile && <div onClick={()=>setSidebarCollapsed(!sidebarCollapsed)} style={{padding:"14px",borderTop:`1px solid ${C.goldBorder}`,textAlign:"center",cursor:"pointer",color:C.textMuted,fontSize:16}}>{sidebarCollapsed?"»":"«"}</div>}
     </div>
   );
@@ -669,9 +712,103 @@ export default function MonarchOS() {
     return(<div><TopBar title="Data Management"/><Card><div style={{fontSize:16,color:C.text,fontWeight:500,fontFamily:FH,marginBottom:14}}>Export Data</div><div style={{display:"flex",gap:10,flexWrap:"wrap"}}><button style={btnStyle} onClick={()=>exportCSV(buyers,"buyers.csv",["name","phone","email","minAcres","maxAcres","maxPrice","locations","notes"])}>Buyers</button><button style={btnStyle} onClick={()=>exportCSV(sellers,"sellers.csv",["name","address","phone","email","status","lastContact","followUp","notes"])}>Sellers</button><button style={btnStyle} onClick={()=>exportCSV(calls,"calls.csv",["date","time","leadId","result","discussed","notes","followUp"])}>Calls</button><button style={btnStyle} onClick={()=>exportCSV(deals,"deals.csv",["address","acres","fmv","offerPrice","buyerPrice","profit","status","dateEntered","targetClose","notes"])}>Pipeline</button></div></Card><Card style={{marginTop:14}}><div style={{fontSize:16,color:C.text,fontWeight:500,fontFamily:FH,marginBottom:14}}>Storage ({profile})</div><div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:14}}>{[["Buyers",buyers],["Sellers",sellers],["Calls",calls],["Deals",deals],["Feedback",feedback],["Market",marketData]].map(([n,d])=>(<div key={n}><div style={{fontSize:11,color:C.textSec,letterSpacing:1,textTransform:"uppercase"}}>{n}</div><div style={{fontSize:20,color:C.text,fontWeight:300,marginTop:2}}>{d.length}</div></div>))}</div></Card><Card style={{marginTop:14,borderColor:"rgba(229,57,53,0.25)"}}><div style={{fontSize:16,color:C.red,fontWeight:500,fontFamily:FH,marginBottom:14}}>Danger Zone</div>{!confirm?<button style={btnDanger} onClick={()=>setConfirm(true)}>Clear All Data</button>:(<div><p style={{color:C.red,fontSize:13,marginBottom:12}}>Permanently delete ALL data for {profile}?</p><div style={{display:"flex",gap:10}}><button style={{...btnDanger,padding:"10px 24px"}} onClick={clearAll}>Yes, Delete Everything</button><button style={btnOutline} onClick={()=>setConfirm(false)}>Cancel</button></div></div>)}</Card><HelpButton pageId="data"/></div>);
   };
 
+  // ═══ MAP PAGE ═══
+  const MapPage = () => {
+    const mapRef = useRef(null);
+    const mapInstance = useRef(null);
+    const markersLayer = useRef(null);
+    const initDone = useRef(false);
+    const [showBuyers, setShowBuyers] = useState(true);
+    const [showArchived, setShowArchived] = useState(false);
+    const [statusFilters, setStatusFilters] = useState(()=>{const o={};CALL_STATUSES.forEach(s=>o[s]=true);return o;});
+    const [leafletReady, setLeafletReady] = useState(!!window.L);
+
+    // Load Leaflet
+    useEffect(()=>{
+      if(window.L){setLeafletReady(true);return;}
+      const css=document.createElement("link");css.rel="stylesheet";css.href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css";document.head.appendChild(css);
+      const js=document.createElement("script");js.src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js";js.onload=()=>setLeafletReady(true);document.head.appendChild(js);
+    },[]);
+
+    // Init map
+    useEffect(()=>{
+      if(!leafletReady||!mapRef.current||initDone.current) return;
+      initDone.current=true;
+      const L=window.L;
+      mapInstance.current=L.map(mapRef.current,{zoomControl:true}).setView([27.9,-81.7],8);
+      L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",{attribution:'© CartoDB',maxZoom:19}).addTo(mapInstance.current);
+      markersLayer.current=L.layerGroup().addTo(mapInstance.current);
+      return()=>{if(mapInstance.current){mapInstance.current.remove();mapInstance.current=null;initDone.current=false;}};
+    },[leafletReady]);
+
+    // Update markers
+    useEffect(()=>{
+      if(!leafletReady||!markersLayer.current) return;
+      const L=window.L;
+      markersLayer.current.clearLayers();
+      // Seller pins
+      const visibleSellers=sellers.filter(s=>{
+        if(!s.lat||!s.lon) return false;
+        if(!showArchived&&s.archived) return false;
+        if(!statusFilters[s.status]) return false;
+        return true;
+      });
+      visibleSellers.forEach(s=>{
+        const color=STATUS_COLORS[s.status]||C.textMuted;
+        const marker=L.circleMarker([s.lat,s.lon],{radius:8,fillColor:color,color:color,fillOpacity:0.85,weight:2});
+        marker.bindPopup(`<div style="font-family:sans-serif;min-width:180px"><b style="font-size:14px">${s.name||"Unknown"}</b><br/><span style="color:#999">${s.address||""}</span><br/><span style="color:${color};font-weight:600">${s.status}</span><br/>${s.phone?`<a href="tel:${s.phone}" style="color:#D4AF37">${s.phone}</a><br/>`:""}<button onclick="window.__monarchLogCall('${s.id}')" style="margin-top:8px;padding:4px 12px;background:#D4AF37;color:#000;border:none;border-radius:6px;cursor:pointer;font-weight:600;font-size:12px">Log Call</button></div>`);
+        markersLayer.current.addLayer(marker);
+      });
+      // Buyer territories
+      if(showBuyers){
+        activeBuyers.forEach(b=>{
+          if(!b.locations) return;
+          const locs=b.locations.toLowerCase().split(",").map(x=>x.trim());
+          locs.forEach(loc=>{
+            const coords=COUNTY_COORDS[loc];
+            if(!coords) return;
+            const circle=L.circle(coords,{radius:24000,color:C.gold,fillColor:C.gold,fillOpacity:0.07,weight:1.5,dashArray:"6 4"});
+            circle.bindPopup(`<div style="font-family:sans-serif"><b style="color:#D4AF37">${b.name}</b><br/>Max: $${Number(b.maxPrice||0).toLocaleString()}<br/>${b.minAcres||"?"}-${b.maxAcres||"?"} acres<br/><span style="color:#999">${b.locations}</span></div>`);
+            markersLayer.current.addLayer(circle);
+          });
+        });
+      }
+    },[leafletReady,sellers,showBuyers,showArchived,statusFilters,activeBuyers]);
+
+    // Global callback for popup button
+    useEffect(()=>{window.__monarchLogCall=(id)=>{setPrefillCallId(id);setPage("calls");};return()=>{delete window.__monarchLogCall;};},[]);
+
+    const toggleStatus=(s)=>setStatusFilters(p=>({...p,[s]:!p[s]}));
+    const geocoded=sellers.filter(s=>s.lat&&s.lon).length;
+
+    return(<div style={{position:"relative"}}>
+      <TopBar title="Seller Map" subtitle={`${geocoded} of ${sellers.filter(s=>!s.archived).length} sellers geocoded`}/>
+      <div style={{position:"relative",borderRadius:16,overflow:"hidden",border:`1px solid ${C.goldBorder}`}}>
+        <div ref={mapRef} style={{height:"calc(100vh - 160px)",width:"100%",background:"#1a1a2e"}}/>
+        {/* Filter panel */}
+        <div style={{position:"absolute",top:16,right:16,zIndex:1000,background:C.bgCard,border:`1px solid ${C.goldBorder}`,borderRadius:14,padding:16,maxWidth:220,maxHeight:"60vh",overflowY:"auto",boxShadow:"0 8px 24px rgba(0,0,0,0.4)"}}>
+          <div style={{fontSize:12,color:C.gold,fontWeight:600,letterSpacing:1,marginBottom:10}}>FILTERS</div>
+          <label style={{display:"flex",alignItems:"center",gap:8,fontSize:12,color:C.text,marginBottom:8,cursor:"pointer"}}>
+            <input type="checkbox" checked={showBuyers} onChange={()=>setShowBuyers(!showBuyers)}/> Show Buyers
+          </label>
+          <label style={{display:"flex",alignItems:"center",gap:8,fontSize:12,color:C.text,marginBottom:10,cursor:"pointer"}}>
+            <input type="checkbox" checked={showArchived} onChange={()=>setShowArchived(!showArchived)}/> Show Archived
+          </label>
+          <div style={{fontSize:11,color:C.textMuted,letterSpacing:1,marginBottom:6}}>STATUS</div>
+          {CALL_STATUSES.map(s=>(
+            <label key={s} style={{display:"flex",alignItems:"center",gap:8,fontSize:11,color:statusFilters[s]?STATUS_COLORS[s]||C.text:C.textMuted,marginBottom:4,cursor:"pointer"}}>
+              <input type="checkbox" checked={!!statusFilters[s]} onChange={()=>toggleStatus(s)}/> {s}
+            </label>
+          ))}
+        </div>
+      </div>
+      <HelpButton pageId="map"/>
+    </div>);
+  };
+
   if(page==="welcome"||!profile) return <WelcomePage/>;
 
-  const pages = {dashboard:<DashboardPage/>,buyers:<BuyersPage/>,sellers:<SellersPage/>,calls:<CallsPage/>,analyzer:<AnalyzerPage/>,pipeline:<PipelinePage/>,templates:<TemplatesPage/>,metrics:<MetricsPage/>,matching:<MatchingPage/>,financial:<FinancialPage/>,calendar:<CalendarPage/>,velocity:<VelocityPage/>,market:<MarketPage/>,feedback:<FeedbackPage/>,bulk:<BulkPage/>,data:<DataPage/>};
+  const pages = {dashboard:<DashboardPage/>,buyers:<BuyersPage/>,sellers:<SellersPage/>,calls:<CallsPage/>,analyzer:<AnalyzerPage/>,pipeline:<PipelinePage/>,templates:<TemplatesPage/>,metrics:<MetricsPage/>,matching:<MatchingPage/>,financial:<FinancialPage/>,calendar:<CalendarPage/>,map:<MapPage/>,velocity:<VelocityPage/>,market:<MarketPage/>,feedback:<FeedbackPage/>,bulk:<BulkPage/>,data:<DataPage/>};
 
   return (
     <div style={{display:"flex",minHeight:"100vh",background:C.bg,color:C.text,fontFamily:FB}}>
