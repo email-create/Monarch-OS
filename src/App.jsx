@@ -348,7 +348,7 @@ export default function MonarchOS() {
   // ═══ SIDEBAR ═══
   const sW = sidebarCollapsed ? 68 : 240;
   const Sidebar = ({mobile}) => (
-    <div style={{width:mobile?260:sW,minWidth:mobile?260:sW,background:C.bgSidebar,borderRight:`1px solid ${C.goldBorder}`,display:"flex",flexDirection:"column",height:mobile?"100dvh":"100vh",overflowY:"auto",position:mobile?"fixed":"sticky",top:0,zIndex:mobile?4000:10,...(mobile?{left:0}:{}),transition:"width 0.3s, min-width 0.3s",WebkitOverflowScrolling:"touch"}}>
+    <div style={{width:mobile?260:sW,minWidth:mobile?260:sW,background:C.bgSidebar,borderRight:`1px solid ${C.goldBorder}`,display:"flex",flexDirection:"column",height:mobile?"100dvh":"100vh",overflowY:"auto",position:mobile?"fixed":"sticky",top:0,zIndex:mobile?4000:10,...(mobile?{left:0,paddingBottom:80}:{}),transition:"width 0.3s, min-width 0.3s",WebkitOverflowScrolling:"touch"}}>
       <div style={{padding:sidebarCollapsed?"18px 12px":"22px 20px",borderBottom:`1px solid ${C.goldBorder}`,display:"flex",alignItems:"center",gap:12,justifyContent:sidebarCollapsed?"center":"flex-start"}}>
         <div style={{fontSize:22,color:C.gold,lineHeight:1,flexShrink:0}}>♛</div>
         {!sidebarCollapsed && <div><div style={{fontSize:13,letterSpacing:2,color:C.gold,fontWeight:600,lineHeight:1}}>Monarch OS</div><div style={{fontSize:10,color:C.textMuted,letterSpacing:1,marginTop:3}}>JW Monarch</div></div>}
