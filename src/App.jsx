@@ -359,7 +359,7 @@ export default function MonarchOS() {
           <div style={{minWidth:0}}><div style={{fontSize:13,color:C.text,fontWeight:500,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{profile}</div><div style={{fontSize:10,color:C.textMuted,letterSpacing:1}}>OPERATOR</div></div>
         </div>
       )}
-      <nav style={{flex:1,padding:"58px 0 10px",overflowY:"auto"}}>
+      <nav style={{flex:1,padding:"68px 0 10px",overflowY:"auto"}}>
         {NAV_ITEMS.map(n => (
           <div key={n.id} onClick={()=>nav(n.id)} title={sidebarCollapsed?n.label:undefined}
             style={{display:"flex",alignItems:"center",gap:12,padding:sidebarCollapsed?"12px 0":"11px 20px",justifyContent:sidebarCollapsed?"center":"flex-start",cursor:"pointer",background:page===n.id?"rgba(212,175,55,0.08)":"transparent",borderLeft:page===n.id&&!sidebarCollapsed?`3px solid ${C.gold}`:"3px solid transparent",color:page===n.id?C.gold:C.textSec,fontSize:13,letterSpacing:0.3,transition:"all 0.2s",fontWeight:page===n.id?500:400}}>
