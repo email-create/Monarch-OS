@@ -87,7 +87,7 @@ const NAV_ITEMS = [
 // ─── Storage paths ───
 const pPath = (profile, type) => `personal/${profile}_${type}`;
 const sPath = (type) => `shared/${type}`;
-const uid = () => Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+const uid = () => crypto.randomUUID();
 const fmt$ = n => "$"+Number(n||0).toLocaleString("en-US",{minimumFractionDigits:0,maximumFractionDigits:0});
 const fmtDate = d => d ? new Date(d+"T00:00:00").toLocaleDateString("en-US",{month:"short",day:"numeric"}) : "—";
 const fmtDateFull = d => d ? new Date(d+"T00:00:00").toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"}) : "—";
@@ -115,7 +115,9 @@ const FormField = ({label,children,full}) => (
   </div>
 );
 
-const Modal = ({title, onClose, children, wide}) => (
+const Modal = ({title, onClose, children, wide}) => {
+  useEffect(()=>{const h=e=>{if(e.key==="Escape")onClose();};document.addEventListener("keydown",h);return()=>document.removeEventListener("keydown",h);},[onClose]);
+  return (
   <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.7)",backdropFilter:"blur(12px)",zIndex:2000,display:"flex",alignItems:"center",justifyContent:"center",padding:20}} onClick={onClose}>
     <div style={{background:"#181818",border:`1px solid ${C.goldBorder}`,borderRadius:20,maxWidth:wide?800:560,width:"100%",maxHeight:"85vh",overflowY:"auto",padding:32,boxShadow:"0 24px 64px rgba(0,0,0,0.5)"}} onClick={e=>e.stopPropagation()}>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:24}}>
@@ -125,7 +127,7 @@ const Modal = ({title, onClose, children, wide}) => (
       {children}
     </div>
   </div>
-);
+);};
 
 const EmptyState = ({icon,msg,action,onAction}) => (
   <div style={{textAlign:"center",padding:"56px 20px"}}>
@@ -168,6 +170,9 @@ export default function MonarchOS() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [profile, setProfile] = useState(() => { try { return localStorage.getItem("monarchOS_activeProfile")||""; } catch{return "";} });
   const [loading, setLoading] = useState(true);
+  const [toasts, setToasts] = useState([]);
+  const [prefillCallId, setPrefillCallId] = useState("");
+  const addToast = (message, type="success") => { const id=crypto.randomUUID(); setToasts(p=>[...p,{id,message,type}]); setTimeout(()=>setToasts(p=>p.filter(t=>t.id!==id)),3500); };
 
   // SHARED data (same for both profiles)
   const [buyers, setBuyers] = useState([]);
@@ -321,12 +326,14 @@ export default function MonarchOS() {
   // ═══ TOP BAR with Profile Switcher ═══
   const TopBar = ({title, subtitle}) => {
     const [showDrop,setShowDrop]=useState(false);
+    const dropRef=useRef(null);
+    useEffect(()=>{if(!showDrop)return;const h=e=>{if(dropRef.current&&!dropRef.current.contains(e.target))setShowDrop(false);};document.addEventListener("mousedown",h);return()=>document.removeEventListener("mousedown",h);},[showDrop]);
     return (
     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:28}}>
       <div><h1 style={{fontSize:26,fontWeight:400,color:C.text,margin:0,letterSpacing:1,fontFamily:FH}}>{title}</h1>{subtitle && <p style={{fontSize:13,color:C.textMuted,marginTop:4,letterSpacing:0.5}}>{subtitle}</p>}</div>
       <div style={{display:"flex",alignItems:"center",gap:16}}>
         {todayFollowUps.length > 0 && <div onClick={()=>setPage("calendar")} style={{position:"relative",cursor:"pointer",color:C.textSec,padding:8,borderRadius:10,background:"rgba(255,255,255,0.03)"}}>{Icons.bell}<span style={{position:"absolute",top:4,right:4,width:16,height:16,borderRadius:8,background:C.red,color:"#fff",fontSize:9,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center"}}>{todayFollowUps.length}</span></div>}
-        <div style={{position:"relative"}}>
+        <div ref={dropRef} style={{position:"relative"}}>
           <div onClick={()=>setShowDrop(!showDrop)} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 14px",borderRadius:12,background:"rgba(255,255,255,0.03)",cursor:"pointer",border:`1px solid ${showDrop?C.gold+"40":"transparent"}`}}>
             <div style={{width:32,height:32,borderRadius:10,background:`linear-gradient(135deg,${C.gold}30,${C.gold}10)`,display:"flex",alignItems:"center",justifyContent:"center",color:C.gold,fontSize:13,fontWeight:600}}>{(profile||"U").charAt(0).toUpperCase()}</div>
             <div><div style={{fontSize:13,color:C.text,fontWeight:500}}>{profile||"Select"}</div><div style={{fontSize:10,color:C.textMuted,letterSpacing:0.5}}>Operator</div></div>
@@ -339,7 +346,7 @@ export default function MonarchOS() {
                 {p}{p===profile&&<span style={{marginLeft:"auto",fontSize:10}}>✓</span>}
               </div>
             ))}
-            <div onClick={()=>{setProfile("");setPage("welcome");setShowDrop(false);sv("monarchOS_activeProfile","");}} style={{padding:"12px 18px",cursor:"pointer",color:C.textMuted,fontSize:12}}>Sign Out</div>
+            <div onClick={()=>{setProfile("");setPage("welcome");setShowDrop(false);try{localStorage.removeItem("monarchOS_activeProfile");}catch{}}} style={{padding:"12px 18px",cursor:"pointer",color:C.textMuted,fontSize:12}}>Sign Out</div>
           </div>}
         </div>
       </div>
@@ -512,7 +519,7 @@ export default function MonarchOS() {
   // ═══ BUYERS (SHARED) ═══
   const BuyersPage = () => {
     const [modal,setModal]=useState(null);const blank={name:"",phone:"",email:"",minAcres:"",maxAcres:"",maxPrice:"",locations:"",notes:"",active:true};const [form,setForm]=useState(blank);
-    const saveBuyer=()=>{if(!form.name)return;if(modal==="new")setBuyers(p=>[{...form,id:uid()},...p]);else setBuyers(p=>p.map(b=>b.id===modal?{...b,...form}:b));setModal(null);};
+    const saveBuyer=()=>{if(!form.name)return;const now=new Date().toISOString();if(modal==="new")setBuyers(p=>[{...form,id:uid(),updatedAt:now},...p]);else setBuyers(p=>p.map(b=>b.id===modal?{...b,...form,updatedAt:now}:b));setModal(null);addToast("Buyer saved");};
     const del=id=>setBuyers(p=>p.filter(b=>b.id!==id));
     return(<div><TopBar title="Buyer Management"/><div style={{display:"flex",justifyContent:"flex-end",marginBottom:18}}><button style={btnStyle} onClick={()=>{setForm(blank);setModal("new");}}>+ Add Buyer</button></div>
       {buyers.length===0?<EmptyState icon="♛" msg="No buyers yet. Add your first buyer." action="Add Buyer" onAction={()=>{setForm(blank);setModal("new");}}/>:<Card style={{padding:0,overflow:"hidden"}}><table style={tableStyle}><thead><tr><th style={{...thStyle,borderRadius:"16px 0 0 0"}}>Name</th><th style={thStyle}>Max Price</th><th style={thStyle}>Locations</th><th style={thStyle}>Status</th><th style={{...thStyle,borderRadius:"0 16px 0 0"}}>Actions</th></tr></thead><tbody>{buyers.map(b=><tr key={b.id}><td style={tdStyle}><div><span style={{fontWeight:500}}>{b.name}</span><div style={{fontSize:11,color:C.textMuted}}>{b.phone}</div></div></td><td style={tdStyle}>{fmt$(b.maxPrice)}</td><td style={tdStyle}>{b.locations||"—"}</td><td style={tdStyle}><Badge color={b.active!==false?C.green:C.red}>{b.active!==false?"Active":"Inactive"}</Badge></td><td style={tdStyle}><div style={{display:"flex",gap:6}}><button style={btnSmall} onClick={()=>{setForm(b);setModal(b.id);}}>Edit</button><button style={btnDanger} onClick={()=>del(b.id)}>Del</button></div></td></tr>)}</tbody></table></Card>}
@@ -523,13 +530,31 @@ export default function MonarchOS() {
 
   // ═══ SELLERS (PERSONAL) ═══
   const SellersPage = () => {
-    const [modal,setModal]=useState(null);const [importModal,setImportModal]=useState(false);const [importText,setImportText]=useState("");const blank={name:"",phone:"",email:"",address:"",status:"Not Called",lastContact:"",followUp:"",notes:"",buyerId:"",archived:false};const [form,setForm]=useState(blank);
-    const saveSeller=()=>{if(modal==="new")setSellers(p=>[{...form,id:uid()},...p]);else setSellers(p=>p.map(l=>l.id===modal?{...l,...form}:l));setModal(null);};
-    const doImport=()=>{const lines=importText.trim().split("\n").filter(Boolean);const nl=lines.map(line=>{const p=line.split(/[,\t]+/).map(s=>s.trim());return{id:uid(),name:p[0]||"",address:p[1]||"",phone:p[2]||"",email:p[3]||"",status:"Not Called",lastContact:"",followUp:"",notes:"",buyerId:"",archived:false};});setSellers(p=>[...nl,...p]);setImportText("");setImportModal(false);};
+    const [modal,setModal]=useState(null);const [importModal,setImportModal]=useState(false);const [importText,setImportText]=useState("");
+    const blank={name:"",phone:"",email:"",address:"",status:"Not Called",lastContact:"",followUp:"",notes:"",buyerId:"",archived:false};
+    const [form,setForm]=useState(blank);const [search,setSearch]=useState("");const [statusFilter,setStatusFilter]=useState("All");const [dupWarning,setDupWarning]=useState("");
+    const checkDup=(f)=>{if(modal!=="new")return"";const match=sellers.find(s=>!s.archived&&((f.phone&&s.phone&&s.phone.trim().replace(/\D/g,"")===f.phone.trim().replace(/\D/g,""))||(f.address&&s.address&&s.address.trim().toLowerCase()===f.address.trim().toLowerCase())));return match?`A seller with this info already exists: ${match.name||match.address||match.phone}`:""};
+    const saveSeller=(force)=>{if(modal==="new"&&!force){const w=checkDup(form);if(w){setDupWarning(w);return;}}const now=new Date().toISOString();if(modal==="new"){setSellers(p=>[{...form,id:uid(),updatedAt:now},...p]);addToast("Seller added");}else{setSellers(p=>p.map(l=>l.id===modal?{...l,...form,updatedAt:now}:l));addToast("Seller updated");}setModal(null);setDupWarning("");};
+    const doImport=()=>{const lines=importText.trim().split("\n").filter(Boolean);const nl=lines.map(line=>{const p=line.split(/[,\t]+/).map(s=>s.trim());return{id:uid(),name:p[0]||"",address:p[1]||"",phone:p[2]||"",email:p[3]||"",status:"Not Called",lastContact:"",followUp:"",notes:"",buyerId:"",archived:false,updatedAt:new Date().toISOString()};});setSellers(p=>[...nl,...p]);setImportText("");setImportModal(false);addToast(`Imported ${nl.length} sellers`);};
+    const inlineStatus=(id,newStatus)=>{setSellers(p=>p.map(l=>l.id===id?{...l,status:newStatus,lastContact:todayStr(),updatedAt:new Date().toISOString()}:l));};
+    const logCallFor=(id)=>{setPrefillCallId(id);setPage("calls");};
     const active=sellers.filter(l=>!l.archived);
-    return(<div><TopBar title="Seller Management"/><div style={{display:"flex",justifyContent:"flex-end",gap:8,marginBottom:18}}><button style={btnOutline} onClick={()=>setImportModal(true)}>Import ProStream</button><button style={btnStyle} onClick={()=>{setForm(blank);setModal("new");}}>+ Add Seller</button></div>
-      {active.length===0?<EmptyState icon="◇" msg="No sellers yet. Add or import sellers." action="Add Seller" onAction={()=>{setForm(blank);setModal("new");}}/>:<Card style={{padding:0,overflow:"hidden"}}><table style={tableStyle}><thead><tr><th style={{...thStyle,borderRadius:"16px 0 0 0"}}>Name</th><th style={thStyle}>Address</th><th style={thStyle}>Status</th><th style={thStyle}>Follow-Up</th><th style={{...thStyle,borderRadius:"0 16px 0 0"}}>Actions</th></tr></thead><tbody>{active.map(l=><tr key={l.id}><td style={tdStyle}><div><span style={{fontWeight:500}}>{l.name||"Unknown"}</span><div style={{fontSize:11,color:C.textMuted}}>{l.phone}</div></div></td><td style={tdStyle}>{l.address||"—"}</td><td style={tdStyle}><Badge color={STATUS_COLORS[l.status]}>{l.status}</Badge></td><td style={tdStyle}>{fmtDate(l.followUp)}</td><td style={tdStyle}><div style={{display:"flex",gap:6}}><button style={btnSmall} onClick={()=>{setForm(l);setModal(l.id);}}>Edit</button><button style={btnDanger} onClick={()=>setSellers(p=>p.map(x=>x.id===l.id?{...x,archived:true}:x))}>Archive</button></div></td></tr>)}</tbody></table></Card>}
-      {modal&&<Modal title={modal==="new"?"Add Seller":"Edit Seller"} onClose={()=>setModal(null)}><div style={formRow}><FormField label="Name"><input style={inputStyle} value={form.name} onChange={e=>setForm(p=>({...p,name:e.target.value}))}/></FormField><FormField label="Phone"><input style={inputStyle} value={form.phone} onChange={e=>setForm(p=>({...p,phone:e.target.value}))}/></FormField></div><FormField label="Address" full><input style={inputStyle} value={form.address} onChange={e=>setForm(p=>({...p,address:e.target.value}))}/></FormField><div style={formRow}><FormField label="Email"><input style={inputStyle} value={form.email} onChange={e=>setForm(p=>({...p,email:e.target.value}))}/></FormField><FormField label="Status"><select style={selectStyle} value={form.status} onChange={e=>setForm(p=>({...p,status:e.target.value}))}>{CALL_STATUSES.map(s=><option key={s}>{s}</option>)}</select></FormField></div><div style={formRow}><FormField label="Last Contact"><input style={inputStyle} type="date" value={form.lastContact} onChange={e=>setForm(p=>({...p,lastContact:e.target.value}))}/></FormField><FormField label="Follow-Up"><input style={inputStyle} type="date" value={form.followUp} onChange={e=>setForm(p=>({...p,followUp:e.target.value}))}/></FormField></div><FormField label="Link to Buyer" full><select style={selectStyle} value={form.buyerId} onChange={e=>setForm(p=>({...p,buyerId:e.target.value}))}><option value="">— None —</option>{activeBuyers.map(b=><option key={b.id} value={b.id}>{b.name}</option>)}</select></FormField><FormField label="Notes" full><textarea style={textareaStyle} value={form.notes} onChange={e=>setForm(p=>({...p,notes:e.target.value}))}/></FormField><button style={btnStyle} onClick={saveSeller}>Save Seller</button></Modal>}
+    const filtered=active.filter(l=>{const q=search.toLowerCase();const matchSearch=!q||(l.name||"").toLowerCase().includes(q)||(l.address||"").toLowerCase().includes(q)||(l.phone||"").includes(q);const matchStatus=statusFilter==="All"||l.status===statusFilter;return matchSearch&&matchStatus;});
+    const daysSince=(d)=>{if(!d)return null;return Math.floor((Date.now()-new Date(d+"T00:00:00"))/864e5);};
+    return(<div><TopBar title="Seller Management"/><div style={{display:"flex",justifyContent:"space-between",gap:8,marginBottom:18,flexWrap:"wrap"}}>
+      <div style={{display:"flex",gap:8,flex:1,minWidth:200}}>
+        <input style={{...inputStyle,maxWidth:280}} placeholder="Search name, address, phone..." value={search} onChange={e=>setSearch(e.target.value)}/>
+        <select style={{...selectStyle,maxWidth:160}} value={statusFilter} onChange={e=>setStatusFilter(e.target.value)}><option value="All">All Statuses</option>{CALL_STATUSES.map(s=><option key={s}>{s}</option>)}</select>
+      </div>
+      <div style={{display:"flex",gap:8}}><button style={btnOutline} onClick={()=>setImportModal(true)}>Import</button><button style={btnStyle} onClick={()=>{setForm(blank);setDupWarning("");setModal("new");}}>+ Add Seller</button></div>
+    </div>
+      <div style={{fontSize:12,color:C.textMuted,marginBottom:12}}>{filtered.length} of {active.length} sellers</div>
+      {active.length===0?<EmptyState icon="◇" msg="No sellers yet. Add or import sellers." action="Add Seller" onAction={()=>{setForm(blank);setModal("new");}}/>:<Card style={{padding:0,overflow:"hidden"}}><table style={tableStyle}><thead><tr><th style={{...thStyle,borderRadius:"16px 0 0 0"}}>Name</th><th style={thStyle}>Address</th><th style={thStyle}>Status</th><th style={thStyle}>Last Contact</th><th style={thStyle}>Follow-Up</th><th style={{...thStyle,borderRadius:"0 16px 0 0"}}>Actions</th></tr></thead><tbody>{filtered.map(l=>{const days=daysSince(l.lastContact);return(<tr key={l.id}><td style={tdStyle}><div><span style={{fontWeight:500}}>{l.name||"Unknown"}</span>{l.phone&&<div><a href={`tel:${l.phone}`} style={{fontSize:11,color:C.gold,textDecoration:"none"}}>{l.phone}</a></div>}</div></td><td style={tdStyle}>{l.address||"—"}</td><td style={tdStyle}><select value={l.status} onChange={e=>inlineStatus(l.id,e.target.value)} style={{background:"transparent",border:"none",color:STATUS_COLORS[l.status]||C.text,fontSize:12,fontWeight:600,fontFamily:"inherit",cursor:"pointer",outline:"none"}}>{CALL_STATUSES.map(s=><option key={s} style={{background:C.bgCard,color:C.text}}>{s}</option>)}</select></td><td style={tdStyle}><span style={{fontSize:12,color:days===null?C.textMuted:days>30?C.red:days>14?C.orange:C.textSec}}>{days===null?"Never":`${days}d ago`}</span></td><td style={tdStyle}>{fmtDate(l.followUp)}</td><td style={tdStyle}><div style={{display:"flex",gap:5}}><button style={{...btnSmall,padding:"5px 10px",fontSize:11}} onClick={()=>logCallFor(l.id)}>Call</button><button style={{...btnSmall,padding:"5px 10px",fontSize:11}} onClick={()=>{setForm(l);setDupWarning("");setModal(l.id);}}>Edit</button><button style={{...btnDanger,padding:"5px 10px",fontSize:11}} onClick={()=>{setSellers(p=>p.map(x=>x.id===l.id?{...x,archived:true}:x));addToast("Seller archived");}}>Arc</button></div></td></tr>);})}</tbody></table></Card>}
+      {modal&&<Modal title={modal==="new"?"Add Seller":"Edit Seller"} onClose={()=>{setModal(null);setDupWarning("");}}>
+        {dupWarning&&<div style={{padding:"10px 14px",background:"rgba(255,149,0,0.1)",border:`1px solid ${C.orange}40`,borderRadius:10,marginBottom:14,fontSize:13,color:C.orange}}>{dupWarning}</div>}
+        <div style={formRow}><FormField label="Name"><input style={inputStyle} value={form.name} onChange={e=>setForm(p=>({...p,name:e.target.value}))}/></FormField><FormField label="Phone"><input style={inputStyle} value={form.phone} onChange={e=>setForm(p=>({...p,phone:e.target.value}))}/></FormField></div><FormField label="Address" full><input style={inputStyle} value={form.address} onChange={e=>setForm(p=>({...p,address:e.target.value}))}/></FormField><div style={formRow}><FormField label="Email"><input style={inputStyle} value={form.email} onChange={e=>setForm(p=>({...p,email:e.target.value}))}/></FormField><FormField label="Status"><select style={selectStyle} value={form.status} onChange={e=>setForm(p=>({...p,status:e.target.value}))}>{CALL_STATUSES.map(s=><option key={s}>{s}</option>)}</select></FormField></div><div style={formRow}><FormField label="Last Contact"><input style={inputStyle} type="date" value={form.lastContact} onChange={e=>setForm(p=>({...p,lastContact:e.target.value}))}/></FormField><FormField label="Follow-Up"><input style={inputStyle} type="date" value={form.followUp} onChange={e=>setForm(p=>({...p,followUp:e.target.value}))}/></FormField></div><FormField label="Link to Buyer" full><select style={selectStyle} value={form.buyerId} onChange={e=>setForm(p=>({...p,buyerId:e.target.value}))}><option value="">— None —</option>{activeBuyers.map(b=><option key={b.id} value={b.id}>{b.name}</option>)}</select></FormField><FormField label="Notes" full><textarea style={textareaStyle} value={form.notes} onChange={e=>setForm(p=>({...p,notes:e.target.value}))}/></FormField>
+        <div style={{display:"flex",gap:10}}><button style={btnStyle} onClick={()=>saveSeller(false)}>Save Seller</button>{dupWarning&&<button style={btnOutline} onClick={()=>saveSeller(true)}>Save Anyway</button>}</div>
+      </Modal>}
       {importModal&&<Modal title="Import ProStream Data" onClose={()=>setImportModal(false)}><p style={{fontSize:13,color:C.textSec,marginBottom:12}}>Paste: Name, Address, Phone, Email (one per line)</p><textarea style={{...textareaStyle,minHeight:160}} value={importText} onChange={e=>setImportText(e.target.value)} placeholder={"John Doe, 123 Main St, 555-1234, john@email.com"}/><button style={{...btnStyle,marginTop:12}} onClick={doImport}>Import Sellers</button></Modal>}
       <HelpButton pageId="sellers"/>
     </div>);
@@ -537,8 +562,10 @@ export default function MonarchOS() {
 
   // ═══ CALL TRACKER (PERSONAL) ═══
   const CallsPage = () => {
-    const [modal,setModal]=useState(false);const [form,setForm]=useState({leadId:"",date:todayStr(),time:"",result:"Answered",notes:"",followUp:"",discussed:""});
-    const saveCall=()=>{const nc={...form,id:uid()};setCalls(p=>[nc,...p]);if(form.leadId){setSellers(p=>p.map(l=>l.id===form.leadId?{...l,status:form.result==="Interested"?"Interested":form.result==="Not Interested"?"Not Interested":form.result==="Voicemail"?"Voicemail":"Called",lastContact:form.date,...(form.followUp?{followUp:form.followUp}:{})}:l));}setModal(false);};
+    const [modal,setModal]=useState(!!prefillCallId);const [form,setForm]=useState({leadId:prefillCallId||"",date:todayStr(),time:new Date().toLocaleTimeString("en-US",{hour12:false,hour:"2-digit",minute:"2-digit"}),result:"Answered",notes:"",followUp:"",discussed:""});
+    useEffect(()=>{if(prefillCallId){setForm(p=>({...p,leadId:prefillCallId}));setModal(true);setPrefillCallId("");}},[]);
+    const RESULT_MAP={"Interested":"Interested","Voicemail":"Voicemail","Rejected":"Not Interested","Not Interested":"Not Interested","Answered":"Called"};
+    const saveCall=()=>{const nc={...form,id:uid(),updatedAt:new Date().toISOString()};setCalls(p=>[nc,...p]);if(form.leadId){const newStatus=RESULT_MAP[form.result]||"Called";setSellers(p=>p.map(l=>l.id===form.leadId?{...l,status:newStatus,lastContact:form.date,updatedAt:new Date().toISOString(),...(form.followUp?{followUp:form.followUp}:{})}:l));}setModal(false);addToast("Call logged");};
     return(<div><TopBar title="Call Tracker"/><div style={{display:"flex",justifyContent:"flex-end",marginBottom:18}}><button style={btnStyle} onClick={()=>{setForm({leadId:"",date:todayStr(),time:new Date().toLocaleTimeString("en-US",{hour12:false,hour:"2-digit",minute:"2-digit"}),result:"Answered",notes:"",followUp:"",discussed:""});setModal(true);}}>+ Log Call</button></div>
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(155px,1fr))",gap:14,marginBottom:22}}>{[{v:calls.length,l:"Total Calls",c:C.blue},{v:weekCalls.length,l:"This Week",c:C.orange},{v:calls.filter(c=>c.result==="Interested").length,l:"Interested",c:C.green}].map((s,i)=>(<Card key={i} style={{padding:18,textAlign:"center"}}><div style={{fontSize:28,fontWeight:400,color:s.c,fontFamily:FH}}>{s.v}</div><div style={{fontSize:11,color:C.textSec,letterSpacing:1,textTransform:"uppercase",marginTop:4}}>{s.l}</div></Card>))}</div>
       {calls.length===0?<EmptyState icon="◇" msg="No calls logged yet."/>:<Card style={{padding:0,overflow:"hidden"}}><table style={tableStyle}><thead><tr><th style={{...thStyle,borderRadius:"16px 0 0 0"}}>Seller</th><th style={thStyle}>Date</th><th style={thStyle}>Time</th><th style={thStyle}>Result</th><th style={{...thStyle,borderRadius:"0 16px 0 0"}}>Notes</th></tr></thead><tbody>{calls.slice(0,30).map(c=>{const l=sellers.find(x=>x.id===c.leadId);return(<tr key={c.id}><td style={tdStyle}>{l?l.name||l.address||l.phone:"—"}</td><td style={tdStyle}>{fmtDate(c.date)}</td><td style={tdStyle}>{c.time||"—"}</td><td style={tdStyle}><Badge color={STATUS_COLORS[c.result]}>{c.result}</Badge></td><td style={tdStyle}><span style={{fontSize:12,color:C.textMuted}}>{c.discussed||c.notes||"—"}</span></td></tr>);})}</tbody></table></Card>}
@@ -560,7 +587,7 @@ export default function MonarchOS() {
   // ═══ DEAL PIPELINE (PERSONAL) ═══
   const PipelinePage = () => {
     const [modal,setModal]=useState(null);const blank={address:"",acres:"",fmv:"",offerPrice:"",buyerPrice:"",profit:"",status:"Prospect",buyerId:"",dateEntered:todayStr(),targetClose:"",notes:""};const [form,setForm]=useState(blank);const [filter,setFilter]=useState("All");
-    const saveDeal=()=>{const d={...form,profit:(Number(form.buyerPrice||0)-Number(form.offerPrice||0)).toString()};if(modal==="new")setDeals(p=>[{...d,id:uid()},...p]);else setDeals(p=>p.map(x=>x.id===modal?{...x,...d}:x));setModal(null);};
+    const saveDeal=()=>{const now=new Date().toISOString();const d={...form,profit:(Number(form.buyerPrice||0)-Number(form.offerPrice||0)).toString(),updatedAt:now};if(modal==="new")setDeals(p=>[{...d,id:uid()},...p]);else setDeals(p=>p.map(x=>x.id===modal?{...x,...d}:x));setModal(null);addToast("Deal saved");};
     const del=id=>setDeals(p=>p.filter(d=>d.id!==id));const filtered=filter==="All"?deals:deals.filter(d=>d.status===filter);
     return(<div><TopBar title="Deal Pipeline"/><div style={{display:"flex",justifyContent:"flex-end",marginBottom:18}}><button style={btnStyle} onClick={()=>{setForm(blank);setModal("new");}}>+ Add Deal</button></div>
       <div style={{display:"flex",gap:8,marginBottom:18,flexWrap:"wrap"}}>{["All",...DEAL_STATUSES].map(s=><button key={s} onClick={()=>setFilter(s)} style={{padding:"7px 18px",borderRadius:10,border:`1px solid ${filter===s?C.gold:C.goldBorder}`,background:filter===s?"rgba(212,175,55,0.1)":"transparent",color:filter===s?C.gold:C.textSec,fontSize:12,cursor:"pointer",fontFamily:"inherit"}}>{s}</button>)}</div>
@@ -597,8 +624,16 @@ export default function MonarchOS() {
 
   // ═══ CALENDAR (PERSONAL) ═══
   const CalendarPage = () => {
-    const t=todayStr();const followUps=sellers.filter(l=>l.followUp).sort((a,b)=>a.followUp.localeCompare(b.followUp));const todayFU=followUps.filter(l=>l.followUp===t);const thisWeek=followUps.filter(l=>{const d=new Date(l.followUp);const now=new Date();return d>=now&&d<=new Date(now.getTime()+7*864e5);});const markCalled=id=>setSellers(p=>p.map(l=>l.id===id?{...l,status:"Called",lastContact:t}:l));
-    return(<div><TopBar title="Calendar / Tasks"/><div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(155px,1fr))",gap:14,marginBottom:22}}><Card style={{padding:18,textAlign:"center"}}><div style={{fontSize:28,fontWeight:400,color:C.orange,fontFamily:FH}}>{todayFU.length}</div><div style={{fontSize:11,color:C.textSec,letterSpacing:1,textTransform:"uppercase",marginTop:4}}>Due Today</div></Card><Card style={{padding:18,textAlign:"center"}}><div style={{fontSize:28,fontWeight:400,color:C.blue,fontFamily:FH}}>{thisWeek.length}</div><div style={{fontSize:11,color:C.textSec,letterSpacing:1,textTransform:"uppercase",marginTop:4}}>This Week</div></Card></div><Card><div style={{fontSize:16,color:C.text,fontWeight:500,fontFamily:FH,marginBottom:14}}>Today's Follow-Ups</div>{todayFU.length===0?<p style={{color:C.textMuted,fontSize:13}}>No follow-ups due today.</p>:todayFU.map(l=>(<div key={l.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"12px 0",borderBottom:`1px solid ${C.goldBorder}`}}><div><span style={{fontWeight:500}}>{l.name}</span><span style={{color:C.textMuted,fontSize:12,marginLeft:10}}>{l.address}</span></div><button style={btnSmall} onClick={()=>markCalled(l.id)}>Mark Called</button></div>))}</Card><Card style={{marginTop:14}}><div style={{fontSize:16,color:C.text,fontWeight:500,fontFamily:FH,marginBottom:14}}>This Week</div>{thisWeek.length===0?<p style={{color:C.textMuted,fontSize:13}}>Nothing scheduled.</p>:thisWeek.map(l=><div key={l.id} style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderBottom:`1px solid ${C.goldBorder}`}}><span>{l.name} <span style={{color:C.textMuted,fontSize:12}}>{fmtDate(l.followUp)}</span></span><Badge color={STATUS_COLORS[l.status]}>{l.status}</Badge></div>)}</Card><HelpButton pageId="calendar"/></div>);
+    const t=todayStr();const allFU=sellers.filter(l=>l.followUp&&!l.archived).sort((a,b)=>a.followUp.localeCompare(b.followUp));
+    const overdue=allFU.filter(l=>l.followUp<t);const todayFU=allFU.filter(l=>l.followUp===t);
+    const thisWeek=allFU.filter(l=>{const d=new Date(l.followUp);const now=new Date();return l.followUp>t&&d<=new Date(now.getTime()+7*864e5);});
+    const markCalled=id=>{setSellers(p=>p.map(l=>l.id===id?{...l,status:"Called",lastContact:t,updatedAt:new Date().toISOString()}:l));addToast("Marked as called");};
+    const Section=({title,items,color,empty})=>(<Card style={{marginBottom:14,...(color?{borderLeft:`3px solid ${color}`}:{})}}><div style={{fontSize:16,color:color||C.text,fontWeight:500,fontFamily:FH,marginBottom:14}}>{title} ({items.length})</div>{items.length===0?<p style={{color:C.textMuted,fontSize:13}}>{empty}</p>:items.map(l=>(<div key={l.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"10px 0",borderBottom:`1px solid ${C.goldBorder}`}}><div><span style={{fontWeight:500}}>{l.name||"Unknown"}</span><span style={{color:C.textMuted,fontSize:12,marginLeft:10}}>{l.address} — {fmtDate(l.followUp)}</span></div><button style={btnSmall} onClick={()=>markCalled(l.id)}>Mark Called</button></div>))}</Card>);
+    return(<div><TopBar title="Calendar / Tasks"/><div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(155px,1fr))",gap:14,marginBottom:22}}><Card style={{padding:18,textAlign:"center"}}><div style={{fontSize:28,fontWeight:400,color:C.red,fontFamily:FH}}>{overdue.length}</div><div style={{fontSize:11,color:C.textSec,letterSpacing:1,textTransform:"uppercase",marginTop:4}}>Overdue</div></Card><Card style={{padding:18,textAlign:"center"}}><div style={{fontSize:28,fontWeight:400,color:C.orange,fontFamily:FH}}>{todayFU.length}</div><div style={{fontSize:11,color:C.textSec,letterSpacing:1,textTransform:"uppercase",marginTop:4}}>Due Today</div></Card><Card style={{padding:18,textAlign:"center"}}><div style={{fontSize:28,fontWeight:400,color:C.blue,fontFamily:FH}}>{thisWeek.length}</div><div style={{fontSize:11,color:C.textSec,letterSpacing:1,textTransform:"uppercase",marginTop:4}}>This Week</div></Card></div>
+      {overdue.length>0&&<Section title="Overdue" items={overdue} color={C.red} empty=""/>}
+      <Section title="Due Today" items={todayFU} color={C.orange} empty="No follow-ups due today."/>
+      <Section title="This Week" items={thisWeek} color={C.blue} empty="Nothing scheduled this week."/>
+      <HelpButton pageId="calendar"/></div>);
   };
 
   // ═══ VELOCITY ═══
@@ -657,6 +692,7 @@ export default function MonarchOS() {
       <main className="m-main" style={{flex:1,padding:"28px 36px",overflowY:"auto",minWidth:0,background:C.bg}}>
         {pages[page]||<DashboardPage/>}
       </main>
+      {toasts.length>0&&<div style={{position:"fixed",bottom:24,left:24,zIndex:3000,display:"flex",flexDirection:"column",gap:8}}>{toasts.map(t=><div key={t.id} style={{background:C.bgCard,border:`1px solid ${C.goldBorder}`,borderRadius:12,padding:"12px 20px",fontSize:13,color:t.type==="error"?C.red:C.gold,boxShadow:"0 8px 24px rgba(0,0,0,0.4)",animation:"fadeIn 0.3s"}}>{t.message}</div>)}</div>}
     </div>
   );
 }
