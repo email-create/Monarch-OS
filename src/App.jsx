@@ -348,7 +348,7 @@ export default function MonarchOS() {
   // ═══ SIDEBAR ═══
   const sW = sidebarCollapsed ? 68 : 240;
   const Sidebar = ({mobile}) => (
-    <div style={{width:mobile?260:sW,minWidth:mobile?260:sW,background:C.bgSidebar,borderRight:`1px solid ${C.goldBorder}`,display:"flex",flexDirection:"column",height:mobile?"100dvh":"100vh",overflowY:"auto",position:mobile?"fixed":"sticky",top:0,zIndex:mobile?4000:10,...(mobile?{left:0,paddingBottom:80}:{}),transition:"width 0.3s, min-width 0.3s",WebkitOverflowScrolling:"touch"}}>
+    <div style={{width:mobile?260:sW,minWidth:mobile?260:sW,background:C.bgSidebar,borderRight:`1px solid ${C.goldBorder}`,display:"flex",flexDirection:"column",height:mobile?"100dvh":"100vh",overflow:"hidden",position:mobile?"fixed":"sticky",top:0,zIndex:mobile?4000:10,...(mobile?{left:0}:{}),transition:"width 0.3s, min-width 0.3s"}}>
       <div style={{padding:sidebarCollapsed?"18px 12px":"22px 20px",borderBottom:`1px solid ${C.goldBorder}`,display:"flex",alignItems:"center",gap:12,justifyContent:sidebarCollapsed?"center":"flex-start"}}>
         <div style={{fontSize:22,color:C.gold,lineHeight:1,flexShrink:0}}>♛</div>
         {!sidebarCollapsed && <div><div style={{fontSize:13,letterSpacing:2,color:C.gold,fontWeight:600,lineHeight:1}}>Monarch OS</div><div style={{fontSize:10,color:C.textMuted,letterSpacing:1,marginTop:3}}>JW Monarch</div></div>}
@@ -359,7 +359,7 @@ export default function MonarchOS() {
           <div style={{minWidth:0}}><div style={{fontSize:13,color:C.text,fontWeight:500,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{profile}</div><div style={{fontSize:10,color:C.textMuted,letterSpacing:1}}>OPERATOR</div></div>
         </div>
       )}
-      <nav style={{flex:1,padding:"68px 0 env(safe-area-inset-bottom, 20px)",overflowY:"auto"}}>
+      <nav style={{flex:1,padding:"68px 0 80px",overflowY:"auto",WebkitOverflowScrolling:"touch"}}>
         {NAV_ITEMS.map(n => (
           <div key={n.id} onClick={()=>nav(n.id)} title={sidebarCollapsed?n.label:undefined}
             style={{display:"flex",alignItems:"center",gap:12,padding:sidebarCollapsed?"12px 0":"11px 20px",justifyContent:sidebarCollapsed?"center":"flex-start",cursor:"pointer",background:page===n.id?"rgba(212,175,55,0.08)":"transparent",borderLeft:page===n.id&&!sidebarCollapsed?`3px solid ${C.gold}`:"3px solid transparent",color:page===n.id?C.gold:C.textSec,fontSize:13,letterSpacing:0.3,transition:"all 0.2s",fontWeight:page===n.id?500:400}}>
