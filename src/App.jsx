@@ -177,6 +177,33 @@ const tableStyle = {width:"100%",borderCollapse:"separate",borderSpacing:0,fontS
 const thStyle = {textAlign:"left",padding:"14px 16px",color:"#0D0D0D",fontSize:11,letterSpacing:1.5,textTransform:"uppercase",fontWeight:700,background:`linear-gradient(135deg,${C.gold},${C.goldDim})`};
 const tdStyle = {padding:"14px 16px",borderBottom:`1px solid ${C.goldBorder}`,color:C.text,verticalAlign:"middle"};
 
+// ═══ WELCOME SCREEN (defined outside MonarchOS to prevent remounting) ═══
+const WelcomePage = ({onSelectProfile}) => (
+  <div style={{position:"fixed",inset:0,background:C.bg,display:"flex",alignItems:"center",justifyContent:"center",zIndex:9999,overflow:"hidden",fontFamily:FH}}>
+    <style>{`@keyframes wFadeUp{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}} @keyframes wFadeUp2{from{opacity:0;transform:translateY(30px)}to{opacity:1;transform:translateY(0)}}`}</style>
+    <div style={{position:"absolute",width:800,height:800,borderRadius:"50%",border:`1px solid rgba(212,175,55,0.04)`,top:"50%",left:"50%",transform:"translate(-50%,-50%)",pointerEvents:"none"}}/>
+    <div style={{position:"absolute",width:500,height:500,borderRadius:"50%",border:`1px solid rgba(212,175,55,0.06)`,top:"50%",left:"50%",transform:"translate(-50%,-50%)",pointerEvents:"none"}}/>
+    <div style={{position:"absolute",width:300,height:300,borderRadius:"50%",background:"radial-gradient(circle,rgba(212,175,55,0.06) 0%,transparent 70%)",top:"50%",left:"50%",transform:"translate(-50%,-50%)",pointerEvents:"none"}}/>
+    <div style={{textAlign:"center",position:"relative",zIndex:1,maxWidth:700,padding:40}}>
+      <div style={{animation:"wFadeUp 1s cubic-bezier(0.16,1,0.3,1) 0.3s both"}}>
+        <div style={{fontSize:46,fontWeight:300,color:C.goldLight,letterSpacing:3,lineHeight:1,whiteSpace:"nowrap"}}>Welcome to Monarch OS</div>
+        <div style={{fontSize:14,color:C.gold,letterSpacing:4,marginTop:12,fontFamily:FB}}>by JW Monarch</div>
+        <div style={{width:80,height:1,background:`linear-gradient(90deg,transparent,${C.gold},transparent)`,margin:"16px auto",opacity:0.6}}/>
+        <p style={{fontSize:15,color:C.textSec,letterSpacing:2,fontWeight:300,fontFamily:FB}}>Land Wholesaling Command Center</p>
+      </div>
+      <div style={{animation:"wFadeUp2 0.9s cubic-bezier(0.16,1,0.3,1) 1s both",marginTop:56}}>
+        <p style={{fontSize:13,color:C.textMuted,marginBottom:20,letterSpacing:1,fontFamily:FB}}>Select your profile</p>
+        <div style={{display:"flex",gap:16,justifyContent:"center"}}>
+          {PROFILES.map(p=>(
+            <button key={p} onClick={()=>onSelectProfile(p)} style={{padding:"18px 48px",borderRadius:14,border:`1px solid ${C.goldBorder}`,background:"rgba(212,175,55,0.06)",color:C.goldLight,fontSize:20,fontFamily:FH,fontWeight:400,letterSpacing:2,cursor:"pointer",transition:"all 0.3s"}}>{p}</button>
+          ))}
+        </div>
+      </div>
+      <p style={{animation:"wFadeUp 1s ease 1.5s both",marginTop:60,fontSize:10,color:C.textMuted,letterSpacing:3,opacity:0.4,fontFamily:FB}}>© {new Date().getFullYear()} JW MONARCH</p>
+    </div>
+  </div>
+);
+
 // ═══ MAIN APP ═══
 export default function MonarchOS() {
   const [page, setPage] = useState("welcome");
@@ -292,33 +319,6 @@ export default function MonarchOS() {
   const totalRevenue = closedDeals.reduce((s,d)=>s+(Number(d.buyerPrice)||0),0);
   const totalProfit = closedDeals.reduce((s,d)=>s+(Number(d.profit)||0),0);
   const todayFollowUps = sellers.filter(l=>l.followUp && l.followUp<=todayStr());
-
-  // ═══ WELCOME SCREEN (CSS animation — immune to parent re-renders) ═══
-  const WelcomePage = () => (
-    <div style={{position:"fixed",inset:0,background:C.bg,display:"flex",alignItems:"center",justifyContent:"center",zIndex:9999,overflow:"hidden",fontFamily:FH}}>
-      <style>{`@keyframes wFadeUp{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}} @keyframes wFadeUp2{from{opacity:0;transform:translateY(30px)}to{opacity:1;transform:translateY(0)}}`}</style>
-      <div style={{position:"absolute",width:800,height:800,borderRadius:"50%",border:`1px solid rgba(212,175,55,0.04)`,top:"50%",left:"50%",transform:"translate(-50%,-50%)",pointerEvents:"none"}}/>
-      <div style={{position:"absolute",width:500,height:500,borderRadius:"50%",border:`1px solid rgba(212,175,55,0.06)`,top:"50%",left:"50%",transform:"translate(-50%,-50%)",pointerEvents:"none"}}/>
-      <div style={{position:"absolute",width:300,height:300,borderRadius:"50%",background:"radial-gradient(circle,rgba(212,175,55,0.06) 0%,transparent 70%)",top:"50%",left:"50%",transform:"translate(-50%,-50%)",pointerEvents:"none"}}/>
-      <div style={{textAlign:"center",position:"relative",zIndex:1,maxWidth:700,padding:40}}>
-        <div style={{animation:"wFadeUp 1s cubic-bezier(0.16,1,0.3,1) 0.3s both"}}>
-          <div style={{fontSize:46,fontWeight:300,color:C.goldLight,letterSpacing:3,lineHeight:1,whiteSpace:"nowrap"}}>Welcome to Monarch OS</div>
-          <div style={{fontSize:14,color:C.gold,letterSpacing:4,marginTop:12,fontFamily:FB}}>by JW Monarch</div>
-          <div style={{width:80,height:1,background:`linear-gradient(90deg,transparent,${C.gold},transparent)`,margin:"16px auto",opacity:0.6}}/>
-          <p style={{fontSize:15,color:C.textSec,letterSpacing:2,fontWeight:300,fontFamily:FB}}>Land Wholesaling Command Center</p>
-        </div>
-        <div style={{animation:"wFadeUp2 0.9s cubic-bezier(0.16,1,0.3,1) 1s both",marginTop:56}}>
-          <p style={{fontSize:13,color:C.textMuted,marginBottom:20,letterSpacing:1,fontFamily:FB}}>Select your profile</p>
-          <div style={{display:"flex",gap:16,justifyContent:"center"}}>
-            {PROFILES.map(p=>(
-              <button key={p} onClick={()=>switchProfile(p)} style={{padding:"18px 48px",borderRadius:14,border:`1px solid ${C.goldBorder}`,background:"rgba(212,175,55,0.06)",color:C.goldLight,fontSize:20,fontFamily:FH,fontWeight:400,letterSpacing:2,cursor:"pointer",transition:"all 0.3s"}}>{p}</button>
-            ))}
-          </div>
-        </div>
-        <p style={{animation:"wFadeUp 1s ease 1.5s both",marginTop:60,fontSize:10,color:C.textMuted,letterSpacing:3,opacity:0.4,fontFamily:FB}}>© {new Date().getFullYear()} JW MONARCH</p>
-      </div>
-    </div>
-  );
 
   // ═══ SIDEBAR ═══
   const sW = sidebarCollapsed ? 68 : 240;
@@ -955,11 +955,7 @@ export default function MonarchOS() {
     </div>);
   };
 
-  // Show blank screen briefly while checking if profile exists (prevents flash)
-  const [appReady, setAppReady] = useState(false);
-  useEffect(()=>{setTimeout(()=>setAppReady(true),100);},[]);
-  if(!appReady) return <div style={{position:"fixed",inset:0,background:C.bg}}/>;
-  if(page==="welcome"||!profile) return <WelcomePage/>;
+  if(page==="welcome"||!profile) return <WelcomePage onSelectProfile={switchProfile}/>;
 
   const pages = {dashboard:<DashboardPage/>,buyers:<BuyersPage/>,sellers:<SellersPage/>,calls:<CallsPage/>,calculator:<AnalyzerPage/>,pipeline:<PipelinePage/>,templates:<TemplatesPage/>,analytics:<AnalyticsPage/>,calendar:<CalendarPage/>,map:<MapPage/>,notes:<FeedbackPage/>,dataImport:<DataImportPage/>};
 
