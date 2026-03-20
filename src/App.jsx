@@ -177,32 +177,49 @@ const tableStyle = {width:"100%",borderCollapse:"separate",borderSpacing:0,fontS
 const thStyle = {textAlign:"left",padding:"14px 16px",color:"#0D0D0D",fontSize:11,letterSpacing:1.5,textTransform:"uppercase",fontWeight:700,background:`linear-gradient(135deg,${C.gold},${C.goldDim})`};
 const tdStyle = {padding:"14px 16px",borderBottom:`1px solid ${C.goldBorder}`,color:C.text,verticalAlign:"middle"};
 
-// ═══ WELCOME SCREEN (defined outside MonarchOS to prevent remounting) ═══
-const WelcomePage = ({onSelectProfile}) => (
-  <div style={{position:"fixed",inset:0,background:C.bg,display:"flex",alignItems:"center",justifyContent:"center",zIndex:9999,overflow:"hidden",fontFamily:FH}}>
-    <style>{`@keyframes wFadeUp{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}} @keyframes wFadeUp2{from{opacity:0;transform:translateY(30px)}to{opacity:1;transform:translateY(0)}}`}</style>
-    <div style={{position:"absolute",width:800,height:800,borderRadius:"50%",border:`1px solid rgba(212,175,55,0.04)`,top:"50%",left:"50%",transform:"translate(-50%,-50%)",pointerEvents:"none"}}/>
-    <div style={{position:"absolute",width:500,height:500,borderRadius:"50%",border:`1px solid rgba(212,175,55,0.06)`,top:"50%",left:"50%",transform:"translate(-50%,-50%)",pointerEvents:"none"}}/>
-    <div style={{position:"absolute",width:300,height:300,borderRadius:"50%",background:"radial-gradient(circle,rgba(212,175,55,0.06) 0%,transparent 70%)",top:"50%",left:"50%",transform:"translate(-50%,-50%)",pointerEvents:"none"}}/>
-    <div style={{textAlign:"center",position:"relative",zIndex:1,maxWidth:700,padding:40}}>
-      <div style={{animation:"wFadeUp 1s cubic-bezier(0.16,1,0.3,1) 0.3s both"}}>
-        <div style={{fontSize:46,fontWeight:300,color:C.goldLight,letterSpacing:3,lineHeight:1,whiteSpace:"nowrap"}}>Welcome to Monarch OS</div>
-        <div style={{fontSize:14,color:C.gold,letterSpacing:4,marginTop:12,fontFamily:FB}}>by JW Monarch</div>
-        <div style={{width:80,height:1,background:`linear-gradient(90deg,transparent,${C.gold},transparent)`,margin:"16px auto",opacity:0.6}}/>
-        <p style={{fontSize:15,color:C.textSec,letterSpacing:2,fontWeight:300,fontFamily:FB}}>Land Wholesaling Command Center</p>
-      </div>
-      <div style={{animation:"wFadeUp2 0.9s cubic-bezier(0.16,1,0.3,1) 1s both",marginTop:56}}>
-        <p style={{fontSize:13,color:C.textMuted,marginBottom:20,letterSpacing:1,fontFamily:FB}}>Select your profile</p>
-        <div style={{display:"flex",gap:16,justifyContent:"center"}}>
-          {PROFILES.map(p=>(
-            <button key={p} onClick={()=>onSelectProfile(p)} style={{padding:"18px 48px",borderRadius:14,border:`1px solid ${C.goldBorder}`,background:"rgba(212,175,55,0.06)",color:C.goldLight,fontSize:20,fontFamily:FH,fontWeight:400,letterSpacing:2,cursor:"pointer",transition:"all 0.3s"}}>{p}</button>
-          ))}
+// ═══ WELCOME SCREEN — Gold Dust (defined outside MonarchOS to prevent remounting) ═══
+const WelcomePage = ({onSelectProfile}) => {
+  const particles = Array.from({length:135},(_,i)=>({
+    id:i, left:Math.random()*100, delay:3.5+Math.random()*8, duration:7.9+Math.random()*10.6, size:1.2+Math.random()*2.3, opacity:0.24+Math.random()*0.56
+  }));
+  return (
+  <div style={{position:"fixed",inset:0,background:C.bg,zIndex:9999,overflow:"hidden",fontFamily:FH}}>
+    <style>{`
+      @keyframes dustFall{0%{transform:translateY(-20px) translateX(0);opacity:0}10%{opacity:var(--dust-op)}50%{opacity:var(--dust-op)}100%{transform:translateY(calc(100vh + 20px)) translateX(30px);opacity:0}}
+      @keyframes dustShimmer{0%,100%{opacity:var(--dust-op)}50%{opacity:calc(var(--dust-op) * 0.4)}}
+      @keyframes dustFadeIn{0%{opacity:0;transform:translateY(20px)}100%{opacity:1;transform:translateY(0)}}
+      @keyframes dustRing{0%{width:0;height:0;opacity:0.5}100%{width:800px;height:800px;opacity:0}}
+      .dust-particle{position:absolute;border-radius:50%;background:${C.gold};box-shadow:0 0 6px 1px rgba(212,175,55,0.4);animation:dustFall var(--dust-dur) linear var(--dust-delay) infinite, dustShimmer 2s ease-in-out var(--dust-delay) infinite;pointer-events:none;z-index:1}
+      .dust-ring{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);border-radius:50%;border:1px solid ${C.gold};opacity:0;animation:dustRing 2s cubic-bezier(0.16,1,0.3,1) 0.5s forwards;pointer-events:none;z-index:2}
+      .dust-content{animation:dustFadeIn 1s cubic-bezier(0.16,1,0.3,1) 0.8s both}
+      .dust-buttons{animation:dustFadeIn 0.9s cubic-bezier(0.16,1,0.3,1) 1.3s both}
+      .dust-footer{animation:dustFadeIn 0.8s ease 1.8s both}
+      .dust-btn{position:relative;padding:18px 48px;border-radius:14px;border:1px solid ${C.goldBorder};background:${C.bg};color:${C.goldLight};font-size:20px;font-family:${FH};font-weight:400;letter-spacing:2px;cursor:pointer;transition:all 0.4s;overflow:hidden}
+      .dust-btn::after{content:'';position:absolute;bottom:6px;left:50%;transform:translateX(-50%);width:0;height:1px;background:${C.gold};transition:width 0.4s cubic-bezier(0.16,1,0.3,1)}
+      .dust-btn:hover::after{width:60%}
+      .dust-btn:hover{background:rgba(212,175,55,0.06);border-color:${C.gold}60}
+    `}</style>
+    {particles.map(p=><div key={p.id} className="dust-particle" style={{"--dust-dur":p.duration+"s","--dust-delay":p.delay+"s","--dust-op":p.opacity,left:p.left+"%",width:p.size,height:p.size,top:-20}}/>)}
+    <div className="dust-ring"/>
+    <div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",zIndex:5}}>
+      <div style={{textAlign:"center",maxWidth:700,padding:40}}>
+        <div className="dust-content">
+          <div style={{fontSize:46,fontWeight:300,color:C.goldLight,letterSpacing:3,lineHeight:1,whiteSpace:"nowrap"}}>Welcome to Monarch OS</div>
+          <div style={{fontSize:14,color:C.gold,letterSpacing:4,marginTop:12,fontFamily:FB}}>by JW Monarch</div>
+          <div style={{width:80,height:1,background:`linear-gradient(90deg,transparent,${C.gold},transparent)`,margin:"20px auto",opacity:0.6}}/>
+          <p style={{fontSize:15,color:C.textSec,letterSpacing:2,fontWeight:300,fontFamily:FB}}>Land Wholesaling Command Center</p>
         </div>
+        <div className="dust-buttons" style={{marginTop:56}}>
+          <p style={{fontSize:13,color:C.textMuted,marginBottom:20,letterSpacing:1,fontFamily:FB}}>Select your profile</p>
+          <div style={{display:"flex",gap:16,justifyContent:"center"}}>
+            {PROFILES.map(p=><button key={p} className="dust-btn" onClick={()=>onSelectProfile(p)}>{p}</button>)}
+          </div>
+        </div>
+        <p className="dust-footer" style={{marginTop:60,fontSize:10,color:C.textMuted,letterSpacing:3,opacity:0.4,fontFamily:FB}}>© {new Date().getFullYear()} JW MONARCH</p>
       </div>
-      <p style={{animation:"wFadeUp 1s ease 1.5s both",marginTop:60,fontSize:10,color:C.textMuted,letterSpacing:3,opacity:0.4,fontFamily:FB}}>© {new Date().getFullYear()} JW MONARCH</p>
     </div>
-  </div>
-);
+  </div>);
+};
 
 // ═══ MAIN APP ═══
 export default function MonarchOS() {
