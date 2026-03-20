@@ -186,7 +186,7 @@ const tdStyle = {padding:"14px 16px",borderBottom:`1px solid ${C.goldBorder}`,co
 // ═══ WELCOME SCREEN — Gold Dust (defined outside MonarchOS to prevent remounting) ═══
 const WelcomePage = ({onSelectProfile}) => {
   const particles = Array.from({length:135},(_,i)=>({
-    id:i, left:Math.random()*100, delay:3.5+Math.random()*8, duration:7.9+Math.random()*10.6, size:1.2+Math.random()*2.3, opacity:0.24+Math.random()*0.56
+    id:i, left:Math.random()*100, delay:3+Math.random()*8, duration:7.9+Math.random()*10.6, size:1.2+Math.random()*2.3, opacity:0.24+Math.random()*0.56
   }));
   return (
   <div style={{position:"fixed",inset:0,background:C.bg,zIndex:9999,overflow:"hidden",fontFamily:FH}}>
@@ -348,7 +348,7 @@ export default function MonarchOS() {
   // ═══ SIDEBAR ═══
   const sW = sidebarCollapsed ? 68 : 240;
   const Sidebar = ({mobile}) => (
-    <div style={{width:mobile?260:sW,minWidth:mobile?260:sW,background:C.bgSidebar,borderRight:`1px solid ${C.goldBorder}`,display:"flex",flexDirection:"column",height:"100vh",overflowY:"auto",position:mobile?"fixed":"sticky",top:0,zIndex:mobile?4000:10,...(mobile?{left:0}:{}),transition:"width 0.3s, min-width 0.3s"}}>
+    <div style={{width:mobile?260:sW,minWidth:mobile?260:sW,background:C.bgSidebar,borderRight:`1px solid ${C.goldBorder}`,display:"flex",flexDirection:"column",height:mobile?"100dvh":"100vh",overflowY:"auto",position:mobile?"fixed":"sticky",top:0,zIndex:mobile?4000:10,...(mobile?{left:0}:{}),transition:"width 0.3s, min-width 0.3s",WebkitOverflowScrolling:"touch"}}>
       <div style={{padding:sidebarCollapsed?"18px 12px":"22px 20px",borderBottom:`1px solid ${C.goldBorder}`,display:"flex",alignItems:"center",gap:12,justifyContent:sidebarCollapsed?"center":"flex-start"}}>
         <div style={{fontSize:22,color:C.gold,lineHeight:1,flexShrink:0}}>♛</div>
         {!sidebarCollapsed && <div><div style={{fontSize:13,letterSpacing:2,color:C.gold,fontWeight:600,lineHeight:1}}>Monarch OS</div><div style={{fontSize:10,color:C.textMuted,letterSpacing:1,marginTop:3}}>JW Monarch</div></div>}
@@ -359,7 +359,7 @@ export default function MonarchOS() {
           <div style={{minWidth:0}}><div style={{fontSize:13,color:C.text,fontWeight:500,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{profile}</div><div style={{fontSize:10,color:C.textMuted,letterSpacing:1}}>OPERATOR</div></div>
         </div>
       )}
-      <nav style={{flex:1,padding:"68px 0 10px",overflowY:"auto"}}>
+      <nav style={{flex:1,padding:"68px 0 env(safe-area-inset-bottom, 20px)",overflowY:"auto"}}>
         {NAV_ITEMS.map(n => (
           <div key={n.id} onClick={()=>nav(n.id)} title={sidebarCollapsed?n.label:undefined}
             style={{display:"flex",alignItems:"center",gap:12,padding:sidebarCollapsed?"12px 0":"11px 20px",justifyContent:sidebarCollapsed?"center":"flex-start",cursor:"pointer",background:page===n.id?"rgba(212,175,55,0.08)":"transparent",borderLeft:page===n.id&&!sidebarCollapsed?`3px solid ${C.gold}`:"3px solid transparent",color:page===n.id?C.gold:C.textSec,fontSize:13,letterSpacing:0.3,transition:"all 0.2s",fontWeight:page===n.id?500:400}}>
@@ -379,7 +379,7 @@ export default function MonarchOS() {
     const dropRef=useRef(null);
     useEffect(()=>{if(!showDrop)return;const h=e=>{if(dropRef.current&&!dropRef.current.contains(e.target))setShowDrop(false);};document.addEventListener("mousedown",h);return()=>document.removeEventListener("mousedown",h);},[showDrop]);
     return (
-    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:28,position:"relative",zIndex:1500}}>
+    <div className="m-topbar" style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:28,position:"relative",zIndex:1500}}>
       <div><h1 style={{fontSize:26,fontWeight:400,color:C.text,margin:0,letterSpacing:1,fontFamily:FH}}>{title}</h1>{subtitle && <p style={{fontSize:13,color:C.textMuted,marginTop:4,letterSpacing:0.5}}>{subtitle}</p>}</div>
       <div style={{display:"flex",alignItems:"center",gap:16}}>
         {todayFollowUps.length > 0 && <div onClick={()=>setPage("calendar")} style={{position:"relative",cursor:"pointer",color:C.textSec,padding:8,borderRadius:10,background:"rgba(255,255,255,0.03)"}}>{Icons.bell}<span style={{position:"absolute",top:4,right:4,width:16,height:16,borderRadius:8,background:C.red,color:"#fff",fontSize:9,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center"}}>{todayFollowUps.length}</span></div>}
@@ -1015,10 +1015,11 @@ export default function MonarchOS() {
         {/* Conversion Ring + Seller Status Breakdown - always visible */}
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,marginBottom:14}}>
           <Card><div style={{fontSize:16,color:C.text,fontWeight:500,fontFamily:FH,marginBottom:14}}>Conversion Rate</div>
-            <div style={{position:"relative",width:120,height:120,margin:"0 auto"}}>
+            <div style={{position:"relative",width:110,height:110,margin:"0 auto"}}>
               <svg viewBox="0 0 120 120" style={{width:"100%"}}><circle cx="60" cy="60" r="50" fill="none" stroke={C.goldBorder} strokeWidth="8"/><circle cx="60" cy="60" r="50" fill="none" stroke={C.gold} strokeWidth="8" strokeLinecap="round" strokeDasharray={`${Number(conv)*3.14} 314`} transform="rotate(-90 60 60)" opacity="0.7"/></svg>
-              <div style={{position:"absolute",inset:0,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center"}}><div style={{fontSize:28,fontWeight:400,color:C.goldLight,fontFamily:FH}}>{conv}%</div><div style={{fontSize:9,color:C.textMuted,letterSpacing:1}}>CALLS → CLOSED</div></div>
+              <div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center"}}><div style={{fontSize:28,fontWeight:400,color:C.goldLight,fontFamily:FH}}>{conv}%</div></div>
             </div>
+            <div style={{textAlign:"center",marginTop:8,fontSize:10,color:C.textMuted,letterSpacing:1}}>CALLS → CLOSED</div>
           </Card>
           <Card><div style={{fontSize:16,color:C.text,fontWeight:500,fontFamily:FH,marginBottom:14}}>Seller Status</div>
             {(()=>{const statCounts={};sellers.filter(s=>!s.archived).forEach(s=>{statCounts[s.status]=(statCounts[s.status]||0)+1;});const entries=Object.entries(statCounts).sort((a,b)=>b[1]-a[1]);const totalS=sellers.filter(s=>!s.archived).length||1;if(!entries.length)return<p style={{color:C.textMuted,fontSize:12}}>No sellers yet.</p>;
@@ -1207,7 +1208,7 @@ export default function MonarchOS() {
         button:hover{opacity:0.88;}
         @keyframes spin{to{transform:rotate(360deg);}}
         tr:hover td{background:rgba(212,175,55,0.03);}
-        @media(max-width:900px){.m-sidebar{display:none!important;}.m-burger{display:flex!important;}.m-main{padding:16px!important;padding-top:56px!important;}.qa-grid{grid-template-columns:repeat(2,1fr)!important;}}
+        @media(max-width:900px){.m-sidebar{display:none!important;}.m-burger{display:flex!important;}.m-main{padding:16px!important;padding-top:60px!important;}.qa-grid{grid-template-columns:repeat(2,1fr)!important;}.m-topbar{flex-direction:column!important;align-items:flex-start!important;gap:8px!important;}}
         @media(max-width:700px){.dash-two-col{grid-template-columns:1fr!important;}.stats-row{grid-template-columns:repeat(2,1fr)!important;}}
       `}</style>
       <button className="m-burger" onClick={()=>setMobileNav(!mobileNav)} style={{display:"none",position:"fixed",top:10,left:10,zIndex:3000,background:C.bgCard,border:`1px solid ${C.goldBorder}`,borderRadius:12,padding:"10px 14px",cursor:"pointer",color:C.gold,fontSize:18,alignItems:"center",justifyContent:"center",boxShadow:"0 4px 16px rgba(0,0,0,0.5)"}}>☰</button>
