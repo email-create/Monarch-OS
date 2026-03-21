@@ -235,6 +235,8 @@ export default function MonarchOS() {
   const [profile, setProfile] = useState(() => { try { return localStorage.getItem("monarchOS_activeProfile")||""; } catch{return "";} });
   const [loading, setLoading] = useState(true);
   const [toasts, setToasts] = useState([]);
+  const [aiResult,setAiResult]=useState(null);const [aiLoading,setAiLoading]=useState(false);const [aiError,setAiError]=useState("");const [showManual,setShowManual]=useState(false);
+  const [calcForm,setCalcForm]=useState({address:"",acres:"",fmv:"",buyerPrice:"",offerPct:60});
   const [prefillCallId, setPrefillCallId] = useState("");
   const [globalSearch, setGlobalSearch] = useState("");
   const [showSearchResults, setShowSearchResults] = useState(false);
@@ -770,9 +772,7 @@ export default function MonarchOS() {
 
   // ═══ DEAL ANALYZER ═══
   const AnalyzerPage = () => {
-    const [f,setF]=useState({address:"",acres:"",fmv:"",buyerPrice:"",offerPct:60});
-    const [aiResult,setAiResult]=useState(null);const [aiLoading,setAiLoading]=useState(false);const [aiError,setAiError]=useState("");
-    const [showManual,setShowManual]=useState(false);
+    const f=calcForm,setF=setCalcForm;
     const offerPrice=Number(f.fmv||0)*(f.offerPct/100);const actualProfit=Number(f.buyerPrice||0)-offerPrice;const buyerSavings=Number(f.fmv||0)-Number(f.buyerPrice||0);
     const hasFMV=!!f.fmv;
     const saveToPipeline=()=>{if(!f.fmv)return;setDeals(p=>[{id:uid(),address:f.address,acres:f.acres,fmv:f.fmv,offerPrice:offerPrice.toFixed(0),buyerPrice:f.buyerPrice,profit:actualProfit.toFixed(0),status:"Prospect",buyerId:"",sellerId:"",dateEntered:todayStr(),targetClose:"",notes:"",...(aiResult?{aiEstimate:aiResult}:{}),updatedAt:new Date().toISOString()},...p]);setPage("pipeline");addToast("Saved to pipeline");};
