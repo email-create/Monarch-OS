@@ -688,7 +688,7 @@ export default function MonarchOS() {
           if(!recent.trim()||recent.length<10)return;
           lastSentRef.current=transcriptRef.current;
           try{
-            const r=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:150,system:[{type:"text",text:`You are a silent real-time AI coach for a land wholesaling cold call. The caller works for JW Monarch buying vacant land in the Myrtle Beach / Horry County, SC market. The seller is: ${cmSeller.name}, property at ${cmSeller.address}. Previous notes: ${cmSeller.notes||"none"}. This is call #${cmSellerCalls.length+1}. Analyze the transcript and return ONLY valid JSON: {trigger (string or null), coaching (1-2 sentence instruction or null), advance_to (null|"opening"|"rapport"|"pitch"|"objections"|"close"), confidence (0-1)}. If nothing notable, return all nulls.`,cache_control:{type:"ephemeral"}}],messages:[{role:"user",content:`Recent transcript: ${recent}`}]})});
+            const r=await fetch("/api/claude",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:150,system:[{type:"text",text:`You are a silent real-time AI coach for a land wholesaling cold call. The caller works for JW Monarch buying vacant land in the Myrtle Beach / Horry County, SC market. The seller is: ${cmSeller.name}, property at ${cmSeller.address}. Previous notes: ${cmSeller.notes||"none"}. This is call #${cmSellerCalls.length+1}. Analyze the transcript and return ONLY valid JSON: {trigger (string or null), coaching (1-2 sentence instruction or null), advance_to (null|"opening"|"rapport"|"pitch"|"objections"|"close"), confidence (0-1)}. If nothing notable, return all nulls.`,cache_control:{type:"ephemeral"}}],messages:[{role:"user",content:`Recent transcript: ${recent}`}]})});
             const data=await r.json();const txt=data.content?.map(i=>i.text||"").filter(Boolean).join("")||"";
             const clean=txt.replace(/```json|```/g,"").trim();const parsed=JSON.parse(clean);
             if(parsed.trigger&&parsed.confidence>0.5){setWhispers(p=>{const next=[{id:uid(),trigger:parsed.trigger,coaching:parsed.coaching,ts:Date.now(),pinned:false},...p];return next.slice(0,4);});}
@@ -708,7 +708,7 @@ export default function MonarchOS() {
       if(!transcriptRef.current.trim()){addToast("No transcript to summarize","error");return;}
       setGenSummary(true);
       try{
-        const r=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:200,system:[{type:"text",text:"You are summarizing a land wholesaling cold call for a CRM log. Be factual, brief, and practical.",cache_control:{type:"ephemeral"}}],messages:[{role:"user",content:`Seller: ${cmSeller?.name}, Address: ${cmSeller?.address}. Full transcript: ${transcriptRef.current}. Write 2-3 sentences covering: what was discussed, the seller's motivation or objections if any, and the agreed next step. Plain text only.`}]})});
+        const r=await fetch("/api/claude",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:200,system:[{type:"text",text:"You are summarizing a land wholesaling cold call for a CRM log. Be factual, brief, and practical.",cache_control:{type:"ephemeral"}}],messages:[{role:"user",content:`Seller: ${cmSeller?.name}, Address: ${cmSeller?.address}. Full transcript: ${transcriptRef.current}. Write 2-3 sentences covering: what was discussed, the seller's motivation or objections if any, and the agreed next step. Plain text only.`}]})});
         const data=await r.json();const txt=data.content?.map(i=>i.text||"").filter(Boolean).join("")||"";
         setForm(p=>({...p,discussed:txt}));addToast("Summary generated");
       }catch(e){addToast("Summary failed","error");}finally{setGenSummary(false);}
@@ -783,7 +783,7 @@ export default function MonarchOS() {
       if(!f.address.trim()){addToast("Enter an address first","error");return;}
       setAiLoading(true);setAiError("");setAiResult(null);
       try{
-        const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},
+        const res=await fetch("/api/claude",{method:"POST",headers:{"Content-Type":"application/json"},
           body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:2000,
             tools:[{type:"web_search_20250305",name:"web_search"}],
             system:"You are a land valuation assistant specializing in the Myrtle Beach and Horry County, South Carolina market. Always search the web for current data.",
