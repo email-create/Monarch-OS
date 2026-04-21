@@ -335,12 +335,12 @@ export default function MonarchOS() {
   }, [profile]);
 
   // Save SHARED to Firebase on change
-  useEffect(() => { if(!skipSave.current) saveData(sPath("buyers"), buyers); }, [buyers]);
-  // Save PERSONAL to Firebase on change
-  useEffect(() => { if(!skipSave.current && profile) saveData(pPath(profile,"sellers"), sellers); }, [sellers]);
-  useEffect(() => { if(!skipSave.current && profile) saveData(pPath(profile,"calls"), calls); }, [calls]);
-  useEffect(() => { if(!skipSave.current && profile) saveData(pPath(profile,"deals"), deals); }, [deals]);
-  useEffect(() => { if(!skipSave.current && profile) saveData(pPath(profile,"feedback"), feedback); }, [feedback]);
+useEffect(() => { if(!skipSave.current && initialized.current.shared) saveData(sPath("buyers"), buyers); }, [buyers]);
+
+  useEffect(() => { if(!skipSave.current && profile && initialized.current.personal) saveData(pPath(profile,"sellers"), sellers); }, [sellers]);
+  useEffect(() => { if(!skipSave.current && profile && initialized.current.personal) saveData(pPath(profile,"calls"), calls); }, [calls]);
+  useEffect(() => { if(!skipSave.current && profile && initialized.current.personal) saveData(pPath(profile,"deals"), deals); }, [deals]);
+  useEffect(() => { if(!skipSave.current && profile && initialized.current.personal) saveData(pPath(profile,"feedback"), feedback); }, [feedback]);
 
   const switchProfile = (p) => {
     try { localStorage.setItem("monarchOS_activeProfile", p); } catch{}
